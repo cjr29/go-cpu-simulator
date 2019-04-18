@@ -33,19 +33,19 @@ func (c *CPU) FetchInstruction(code []byte) {
 	c.PC++
 	op := instruction & 0xe0
 	switch op {
-	case 0x00: // SET
+	case MaskSet: // SET
 		val := instruction & 0x1f
 		c.Registers[0] = int(val)
-	case 0x20: // ADD
+	case MaskAdd: // ADD
 		reg := (instruction&0x1e)>>1 + 1
 		c.Registers[0] += c.Registers[reg]
-	case 0x40: // SUB
+	case MaskSub: // SUB
 		reg := (instruction&0x1e)>>1 + 1
 		c.Registers[0] -= c.Registers[reg]
-	case 0x60: // MUL
+	case MaskMul: // MUL
 		reg := (instruction&0x1e)>>1 + 1
 		c.Registers[0] *= c.Registers[reg]
-	case 0x80: // PUSH
+	case MaskPush: // PUSH
 		opt := instruction & 0x01
 		var reg byte
 		if opt == 1 {
@@ -55,7 +55,7 @@ func (c *CPU) FetchInstruction(code []byte) {
 		}
 		c.Stack[c.SP] = c.Registers[reg]
 		c.SP++
-	case 0xa0: // POP
+	case MaskPop: // POP
 		opt := instruction & 0x01
 		var reg byte
 		if opt == 1 {
@@ -65,7 +65,7 @@ func (c *CPU) FetchInstruction(code []byte) {
 		}
 		c.SP--
 		c.Registers[reg] = c.Stack[c.SP]
-	case 0xc0: // GOTO
+	case MaskGoto: // GOTO
 		opt := instruction & 0x01
 		if opt == 1 { // R0 != 0
 			if c.Registers[0] != 0 {
@@ -76,7 +76,7 @@ func (c *CPU) FetchInstruction(code []byte) {
 				c.PC = c.Labels[(instruction&0x1e)>>1]
 			}
 		}
-	case 0xe0: // LABEL
+	case MaskLabel: // LABEL
 		break
 	}
 }
@@ -124,34 +124,34 @@ func asmToByte(s string) byte {
 	switch parts[0] {
 	case "set":
 		i, _ := strconv.Atoi(parts[1])
-		b = 0x00 + byte(i)
+		b = MaskSet + byte(i)
 	case "add":
 		i, _ := strconv.Atoi(parts[1])
 		i = (i - 1) << 1
-		b = 0x20 + byte(i)
+		b = MaskAdd + byte(i)
 	case "sub":
 		i, _ := strconv.Atoi(parts[1])
 		i = (i - 1) << 1
-		b = 0x40 + byte(i)
+		b = MaskSub + byte(i)
 	case "mul":
 		i, _ := strconv.Atoi(parts[1])
 		i = (i - 1) << 1
-		b = 0x60 + byte(i)
+		b = MaskMul + byte(i)
 	case "push":
 		i, _ := strconv.Atoi(parts[1])
 		if i == 0 {
-			b = 0x80 + 0x01
+			b = MaskPush + 0x01
 		} else {
 			i = (i - 1) << 1
-			b = 0x80 + byte(i)
+			b = MaskPush + byte(i)
 		}
 	case "pop":
 		i, _ := strconv.Atoi(parts[1])
 		if i == 0 {
-			b = 0xa0 + 0x01
+			b = MaskPop + 0x01
 		} else {
 			i = (i - 1) << 1
-			b = 0xa0 + byte(i)
+			b = MaskPop + byte(i)
 		}
 	case "goto":
 		l, _ := strconv.Atoi(parts[1])
