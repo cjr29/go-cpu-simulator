@@ -1,6 +1,8 @@
 # Introduction
 
-This CPU simulator is a re-implementation in Go of my solution to a programming contest held at my workplace recently. It's also the result of my growing interest in trying to understand low-level details of how processors carry out computation. The architecture of this particular processor is very simplistic, allowing easy understanding of its internals, at the cost of making actual programming cumbersome and tedious.
+This CPU simulator is a re-implementation in Go of my (Wojciech S. Gac) solution to a programming contest held at my workplace recently. It's also the result of my growing interest in trying to understand low-level details of how processors carry out computation. The architecture of this particular processor is very simplistic, allowing easy understanding of its internals, at the cost of making actual programming cumbersome and tedious.
+
+**Chris Riddick has added a GUI front-end to the simulator. The GUI is based on the Fyne.io API library that supports Mac, Windows, and Linux.**
 
 ## Architecture description
 
