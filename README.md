@@ -17,6 +17,11 @@ In the description below the following symbolic bits are used:
 `S` - switch bit (switches between two modes of an instruction)
 `L` - label (used to define targets for GOTO jumps)
 
+Note: The label `L` is not a normal machine code usage. In this context, it provides a simple means for using GOTO
+instructions without having to reference a memory address. A proper assembler would translate a label in the assembly
+code to a memory address to which a JUMP instruction would move the Program Counter (PC). A future enhancement to this
+simulator will remove the need for the preprocessor and `LABEL` instruction.
+
 The table below describes the complete instruction set, together with bit patterns:
 
 Instruction|Bit Pattern|Description
