@@ -7,6 +7,7 @@ import (
 	"strconv"
 
 	"chrisriddick.net/cpusimple"
+	//"chrisriddick.net/dashboard"
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
@@ -17,15 +18,23 @@ import (
 	"fyne.io/fyne/v2/widget"
 )
 
+const (
+	memSize   = 128
+	stackSize = 1000
+)
+
 func main() {
 
-	memory := []byte{
+	program := []byte{
 		0x00, 0x81, 0xa0, 0x0b, 0x81, 0xa2, 0x01, 0x81, 0xa4, 0xe0,
 		0x80, 0xa1, 0x24, 0x81, 0xa0, 0x01, 0x24, 0x81, 0xa4, 0x42,
 		0xc1, 0x80, 0xa1,
 	}
+	log.Println("Length of program = ", len(program))
 
 	cpu := cpusimple.CPU{}
+	cpu.SetMemSize(memSize)
+	cpu.SetStackSize(stackSize)
 
 	a := app.NewWithID("simpleCPU")
 	w := a.NewWindow("Simple CPU Simulator")
@@ -37,10 +46,15 @@ func main() {
 	inputCPUClock.SetPlaceHolder("0.0")
 
 	runButton := widget.NewButton("Run", func() {
-		log.Println("Run pressed")
-		statusBar.Set("Run button pressed.")
-		log.Println("Run program")
-		res := cpu.Run(memory, len(memory))
+		statusBar.Set("Run program.")
+		cpu.Reset()
+		cpu.Load(program, len(program))
+		cpu.Preprocess(cpu.Memory[0:], len(program))
+		res := cpu.RunProgram(len(program))
+		// Print contents of CPU Memory
+		for i := 0; i < len(cpu.Memory); i = i + 16 {
+			fmt.Println(cpu.GetMemory(i))
+		}
 		statusBar.Set("R0 = " + strconv.Itoa(res))
 	})
 
@@ -57,6 +71,7 @@ func main() {
 	resetButton := widget.NewButton("Reset", func() {
 		log.Println("Reset pressed")
 		statusBar.Set("Reset button pressed.")
+		cpu.Reset()
 	})
 
 	registerHeader := container.New(layout.NewHBoxLayout(), canvas.NewText("Register          Value", color.Black))
@@ -85,7 +100,8 @@ func main() {
 			return len(cpu.Stack)
 		},
 		func() fyne.CanvasObject {
-			return widget.NewLabel("CPU Stack")
+			stackHeader := widget.NewLabel("CPU Stack")
+			return stackHeader
 		},
 		func(i widget.ListItemID, o fyne.CanvasObject) {
 			t := cpu.Stack[i]
@@ -94,7 +110,6 @@ func main() {
 
 	stackContainer := container.New(
 		layout.NewMaxLayout(),
-		//canvas.NewText("CPU Stack", color.Black),
 		stackContent,
 	)
 
@@ -120,9 +135,12 @@ func main() {
 	statusContainer := container.NewHBox(
 		widget.NewLabelWithData(statusBar),
 	)
+
+	memoryGrid := widget.NewTextGridFromString("Display memory grid here")
+	// memoryGrid := widget.NewTextGridFromString(displayLine)
 	memoryContainer := container.New(
 		layout.NewCenterLayout(),
-		canvas.NewText("Display memory grid here", color.Black),
+		memoryGrid,
 	)
 
 	registerContainer := container.New(layout.NewVBoxLayout(), registerHeader, r0, r1, r2, r3, r4, r5, r6, r7, r8, r9, r10, r11, r12, r13, r14, r15, r16)

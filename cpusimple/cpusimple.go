@@ -1,6 +1,7 @@
 package cpusimple
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 )
@@ -22,7 +23,8 @@ type CPU struct {
 	Registers [17]int
 	Labels    [16]int
 	PC        int // Program counter
-	Stack     [1000]int
+	Memory    []byte
+	Stack     []int
 	SP        int     // Stack pointer
 	Clock     float64 // clock speed. If = 0, full speed
 }
@@ -96,13 +98,16 @@ func (c *CPU) Preprocess(code []byte, codeLength int) {
 func (c *CPU) Reset() {
 	c.PC = 0
 	c.SP = 0
+	for i := 0; i < len(c.Memory); i++ {
+		c.Memory[i] = 0
+	}
 	for i := 0; i < 16; i++ {
 		c.Labels[i] = 0
 	}
 	for i := 0; i < 17; i++ {
 		c.Registers[i] = 0
 	}
-	for i := 0; i < 1000; i++ {
+	for i := 0; i < len(c.Stack); i++ {
 		c.Stack[i] = 0
 	}
 }
@@ -112,10 +117,27 @@ func (c *CPU) Reset() {
 func (c *CPU) Run(code []byte, codeLength int) int {
 	c.Reset()
 	c.Preprocess(code, codeLength)
+	c.Load(code, codeLength)
 	for c.PC < codeLength {
 		c.FetchInstruction(code)
 	}
 	return c.Registers[0]
+}
+
+// RunProgram carries out a sequence of instructions beginning in memory at PC location and finally returns
+// the contents of R0
+func (c *CPU) RunProgram(programLength int) int {
+	for c.PC < programLength {
+		c.FetchInstruction(c.Memory[0:])
+	}
+	return c.Registers[0]
+}
+
+// Load Memory with preprocessed program
+func (c *CPU) Load(program []byte, programLength int) {
+	for i := 0; i < programLength; i++ {
+		c.Memory[i] = program[i]
+	}
 }
 
 // Translate a symbolic instruction mnemonic into a byte
@@ -174,4 +196,31 @@ func AsmCodeToBytes(code []string) []byte {
 	}
 
 	return bytes
+}
+
+// GetMemory returns a 16 byte formatted string starting at provided index
+func (c *CPU) GetMemory(index int) string {
+	var line string
+	for i := index; i < index+16; i++ {
+		line = line + fmt.Sprintf("%02x ", c.Memory[i])
+	}
+	return line
+}
+
+// SetMemSize expands Memory slice to specified size and initializes to all zeros
+func (c *CPU) SetMemSize(size int) {
+	tempSlice := make([]byte, size)
+	for i := 1; i < size; i++ {
+		tempSlice[i] = 0
+	}
+	c.Memory = append(c.Memory, tempSlice...)
+}
+
+// SetStackSize expands Memory slice to specified size and initializes to all zeros
+func (c *CPU) SetStackSize(size int) {
+	tempStackSlice := make([]int, size)
+	for i := 1; i < size; i++ {
+		tempStackSlice[i] = 0
+	}
+	c.Stack = append(c.Stack, tempStackSlice...)
 }
