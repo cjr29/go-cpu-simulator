@@ -16,14 +16,9 @@ import (
 	"fyne.io/fyne/v2/widget"
 )
 
-func New(cpu *cpusimple.CPU) fyne.Window {
+var CPUStatus string
 
-	program := []byte{
-		0x00, 0x81, 0xa0, 0x0b, 0x81, 0xa2, 0x01, 0x81, 0xa4, 0xe0,
-		0x80, 0xa1, 0x24, 0x81, 0xa0, 0x01, 0x24, 0x81, 0xa4, 0x42,
-		0xc1, 0x80, 0xa1,
-	}
-	log.Println("Length of program = ", len(program))
+func New(cpu *cpusimple.CPU, load func(), run func(), step func(), halt func(), reset func()) fyne.Window {
 
 	a := app.NewWithID("simpleCPU")
 	w := a.NewWindow("Simple CPU Simulator")
@@ -34,38 +29,15 @@ func New(cpu *cpusimple.CPU) fyne.Window {
 	inputCPUClock := widget.NewEntry()
 	inputCPUClock.SetPlaceHolder("0.0")
 
-	runButton := widget.NewButton("Run", func() {
-		statusBar.Set("Run program.")
-		cpu.Step = false
-		cpu.Reset()
-		cpu.Load(program, len(program))
-		cpu.Preprocess(cpu.Memory[0:], len(program))
-		res := cpu.RunProgram(len(program))
-		// Print contents of CPU Memory
-		for i := 0; i < len(cpu.Memory); i = i + 16 {
-			fmt.Println(cpu.GetMemory(i))
-		}
-		statusBar.Set("R0 = " + strconv.Itoa(res))
-	})
+	loadButton := widget.NewButton("Load", load)
 
-	haltButton := widget.NewButton("Halt", func() {
-		log.Println("Halt pressed")
-		statusBar.Set("Halt button pressed.")
-		cpu.Halt = true
-		panic(0)
-	})
+	runButton := widget.NewButton("Run", run)
 
-	stepButton := widget.NewButton("Step", func() {
-		log.Println("Step pressed")
-		statusBar.Set("Step button pressed.")
-		cpu.Step = true
-	})
+	haltButton := widget.NewButton("Halt", halt)
 
-	resetButton := widget.NewButton("Reset", func() {
-		log.Println("Reset pressed")
-		statusBar.Set("Reset button pressed.")
-		cpu.Reset()
-	})
+	stepButton := widget.NewButton("Step", step)
+
+	resetButton := widget.NewButton("Reset", reset)
 
 	registerHeader := container.New(layout.NewHBoxLayout(), canvas.NewText("Register          Value", color.Black))
 
@@ -121,7 +93,7 @@ func New(cpu *cpusimple.CPU) fyne.Window {
 		layout.NewSpacer(),
 	)
 
-	buttonsContainer := container.New(layout.NewHBoxLayout(), runButton, haltButton, stepButton, resetButton)
+	buttonsContainer := container.New(layout.NewHBoxLayout(), loadButton, runButton, haltButton, stepButton, resetButton)
 
 	settingsContainer := container.New(layout.NewVBoxLayout(), buttonsContainer, speedContainer)
 
@@ -139,7 +111,7 @@ func New(cpu *cpusimple.CPU) fyne.Window {
 
 	w.SetContent(container.NewBorder(settingsContainer, statusContainer, registerContainer, stackContainer, memoryContainer))
 
-	w.ShowAndRun()
+	// w.ShowAndRun()
 
 	return w
 }

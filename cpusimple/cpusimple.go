@@ -27,8 +27,6 @@ type CPU struct {
 	Memory    []byte
 	Stack     []int
 	Clock     float64 // clock speed. If = 0, full speed
-	Step      bool    // CPU clock step, halt after each clock cycle if true
-	Halt      bool    // Stop CPU
 }
 
 // FetchInstruction is a dispatcher function, which takes care of properly
@@ -100,8 +98,7 @@ func (c *CPU) Preprocess(code []byte, codeLength int) {
 func (c *CPU) Reset() {
 	c.PC = 0
 	c.SP = 0
-	c.Step = false
-	c.Halt = false
+
 	for i := 0; i < len(c.Memory); i++ {
 		c.Memory[i] = 0
 	}
