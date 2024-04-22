@@ -4,6 +4,7 @@ go 1.21.6
 
 require (
 	chrisriddick.net/cpusimple v0.0.0
+	chrisriddick.net/dashboard v0.0.0
 	fyne.io/fyne/v2 v2.2.0
 )
 
@@ -37,3 +38,5 @@ require (
 )
 
 replace chrisriddick.net/cpusimple v0.0.0 => ./cpusimple
+
+replace chrisriddick.net/dashboard v0.0.0 => ./dashboard
