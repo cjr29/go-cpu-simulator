@@ -27,7 +27,11 @@ var (
 	statusBarBound                                        binding.ExternalString
 	stackDisplay                                          string
 	stackLabelWidget                                      *widget.Label
-	//stackDisplayBound                                     binding.ExternalString
+	memoryDisplay                                         string
+	//memoryGrid                                            *widget.Label
+	memoryGridLabel *widget.Label
+	memoryLabel     *widget.Label
+	//memoryLabelWidget                                     *widget.Label
 )
 
 func New(cpu *cpusimple.CPU, load func(), run func(), step func(), halt func(), reset func()) fyne.Window {
@@ -41,9 +45,6 @@ func New(cpu *cpusimple.CPU, load func(), run func(), step func(), halt func(), 
 
 	inputCPUClock := widget.NewEntry()
 	inputCPUClock.SetPlaceHolder("0.0")
-
-	//stackDisplayBound = binding.BindString(&stackDisplay)
-	stackDisplay = cpu.GetStack()
 
 	loadButton := widget.NewButton("Load", load)
 
@@ -111,41 +112,26 @@ func New(cpu *cpusimple.CPU, load func(), run func(), step func(), halt func(), 
 	r15 := container.New(layout.NewHBoxLayout(), br15s)
 	r16 := container.New(layout.NewHBoxLayout(), br16s)
 
-	//stackHeader := container.New(layout.NewHBoxLayout(), canvas.NewText("Stack", color.Black))
-	stackHeader := widget.NewLabel("Stack")
+	registerContainer := container.New(layout.NewVBoxLayout(), registerHeader, r0, r1, r2, r3, r4, r5, r6, r7, r8, r9, r10, r11, r12, r13, r14, r15, r16)
+
+	// Stack
+	stackHeader := widget.NewLabel("Stack\nContent")
 	stackHeader.TextStyle.Monospace = true
-
-	// Copy stack into string array and build list for display
-	/* stackContent := widget.NewList(
-	func() int {
-		return len(cpu.Stack)
-	},
-	func() fyne.CanvasObject {
-		stackHeader := widget.NewLabel("CPU Stack")
-		return stackHeader
-	},
-	func(i widget.ListItemID, o fyne.CanvasObject) {
-		t := cpu.Stack[i]
-		o.(*widget.Label).SetText(fmt.Sprintf("%04x", t&0xFFFF))
-	}) */
-
-	/* stackListBound = binding.BindIntList(&cpu.Stack)
-	stackList := widget.NewListWithData(stackListBound,
-		func() fyne.CanvasObject {
-			return widget.NewLabel("template")
-		},
-		func(i binding.DataItem, o fyne.CanvasObject) {
-			o.(*widget.Label).Bind(i.(binding.String))
-		}) */
-
-	/* stackContainer := container.New(
-		layout.NewHBoxLayout(),
-		stackContent,
-		stackList,
-	) */
-
 	stackDisplay = cpu.GetStack()
+	stackLabelWidget = widget.NewLabel(stackDisplay)
+	stackContainer := container.New(layout.NewVBoxLayout(), stackHeader, stackLabelWidget)
 
+	// Memory
+	memoryDisplay = cpu.GetAllMemory()
+	memoryLabel = widget.NewLabel("Contents of Memory:\n")
+	memoryGridLabel = widget.NewLabel(memoryDisplay)
+	memoryContainer := container.New(
+		layout.NewVBoxLayout(),
+		memoryLabel,
+		memoryGridLabel,
+	)
+
+	// Speed entry
 	speedContainer := container.New(
 		layout.NewHBoxLayout(),
 		layout.NewSpacer(),
@@ -157,7 +143,6 @@ func New(cpu *cpusimple.CPU, load func(), run func(), step func(), halt func(), 
 				}
 			})),
 		canvas.NewText("Set clock speed in seconds. Zero sets clock to full speed.  ", color.Black),
-		//canvas.NewText("    CPU Stack", color.Black),
 		layout.NewSpacer(),
 	)
 
@@ -166,19 +151,6 @@ func New(cpu *cpusimple.CPU, load func(), run func(), step func(), halt func(), 
 	settingsContainer := container.New(layout.NewVBoxLayout(), buttonsContainer, speedContainer)
 
 	statusContainer := container.NewHBox(widget.NewLabelWithData(statusBarBound))
-
-	memoryGrid := widget.NewTextGridFromString("Display memory grid here")
-	memoryContainer := container.New(
-		layout.NewCenterLayout(),
-		memoryGrid,
-	)
-
-	// stackContainer := container.New(layout.NewMaxLayout(), stackContent)
-
-	stackLabelWidget = widget.NewLabel(stackDisplay)
-	stackContainer := container.New(layout.NewVBoxLayout(), stackHeader, stackLabelWidget)
-
-	registerContainer := container.New(layout.NewVBoxLayout(), registerHeader, r0, r1, r2, r3, r4, r5, r6, r7, r8, r9, r10, r11, r12, r13, r14, r15, r16)
 
 	w.SetContent(container.NewBorder(settingsContainer, statusContainer, registerContainer, stackContainer, memoryContainer))
 
@@ -189,6 +161,9 @@ func UpdateAll() {
 	br0.Reload()
 	stackDisplay = c.GetStack()
 	stackLabelWidget.Text = stackDisplay
+	memoryDisplay = c.GetAllMemory()
+	log.Println("UpdateAll():\n" + memoryDisplay)
+	memoryGridLabel.SetText(memoryDisplay)
 	stackLabelWidget.Refresh()
 }
 

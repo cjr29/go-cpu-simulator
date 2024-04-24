@@ -2,6 +2,7 @@ package cpusimple
 
 import (
 	"fmt"
+	"log"
 	"strconv"
 	"strings"
 )
@@ -120,7 +121,7 @@ func (c *CPU) Run(code []byte, codeLength int) int {
 	c.Preprocess(code, codeLength)
 	c.Load(code, codeLength)
 	for c.PC < codeLength {
-		c.FetchInstruction(code)
+		c.FetchInstruction(c.Memory[0:])
 	}
 	return c.Registers[0]
 }
@@ -139,6 +140,7 @@ func (c *CPU) Load(program []byte, programLength int) {
 	for i := 0; i < programLength; i++ {
 		c.Memory[i] = program[i]
 	}
+	log.Println("Load: " + fmt.Sprintf("%02x ", c.Memory[99]))
 }
 
 // Translate a symbolic instruction mnemonic into a byte
@@ -208,12 +210,35 @@ func (c *CPU) GetMemory(index int) string {
 	return line
 }
 
+// GetAllMemory returns a 16 byte formatted string starting at provided index
+func (c *CPU) GetAllMemory() string {
+	var line string
+	blocks := len(c.Memory) / 16
+	remainder := len(c.Memory) % 16
+	//log.Println("Blocks = ", blocks)
+	//log.Println("Remainder = ", remainder)
+	k := 0
+	for j := 0; j < blocks; j++ {
+		for i := k; i < k+16; i++ {
+			line = line + fmt.Sprintf("%02x ", c.Memory[i])
+		}
+		line = line + "\n"
+		k = k + 16
+	}
+	endBlock := blocks * 16
+	for i := endBlock; i < endBlock+remainder; i++ {
+		line = line + fmt.Sprintf("%02x ", c.Memory[i])
+	}
+	line = line + "\n"
+	return line
+}
+
 // GetStack returns a formatted string of bytes beginning at SP(0)
 func (c *CPU) GetStack() string {
 	var s string
 	//s = "\nStack\n"
 	for i := 0; i < len(c.Stack); i++ {
-		s = s + fmt.Sprintf("%04d\n", c.Stack[i])
+		s = s + fmt.Sprintf("x%04x\n", c.Stack[i])
 	}
 	return s
 }
@@ -234,4 +259,8 @@ func (c *CPU) SetStackSize(size int) {
 		tempStackSlice[i] = 0
 	}
 	c.Stack = append(c.Stack, tempStackSlice...)
+}
+
+func NewCPU() *CPU {
+	return &CPU{}
 }

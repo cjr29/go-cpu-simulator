@@ -16,7 +16,7 @@ const (
 )
 
 var (
-	cpu     cpusimple.CPU
+	cpu     = *cpusimple.NewCPU()
 	program = []byte{
 		0x00, 0x81, 0xa0, 0x0b, 0x81, 0xa2, 0x01, 0x81, 0xa4, 0xe0,
 		0x80, 0xa1, 0x24, 0x81, 0xa0, 0x01, 0x24, 0x81, 0xa4, 0x42,
@@ -43,32 +43,32 @@ func main() {
 
 	cpu.SetMemSize(memSize)
 	cpu.SetStackSize(stackSize)
+	// Set up Fyne window before trying to write to Status line!!!
+	var w fyne.Window = dashboard.New(&cpu, load, run, step, halt, reset)
 
 	cpu.Reset()
 	cpu.Load(program, len(program))
+	//load()
 	cpu.Preprocess(cpu.Memory[0:], len(program))
-
-	var w fyne.Window = dashboard.New(&cpu, load, run, step, halt, reset)
 
 	w.ShowAndRun()
 
 }
 
 func load() {
-	// Loads code in []p into CPU memory at address a
+	// Loads code in []p into CPU memory at index a
+	log.Println("Entered load().")
 	cpu.Load(program, len(program))
-	dashboard.SetStatus("Loaded new program into memory")
 	log.Println("Program loaded")
+	//dashboard.SetStatus("Loaded new program into memory")
 	dashboard.UpdateAll()
 }
 
 func run() {
+	//cpu.RunProgram(len(program))
 	cpu.Run(program, len(program))
 	log.Printf("Program finished. R0 = %d; PC = %d, SP = %d, S[0] = %d\n", cpu.Registers[0], cpu.PC, cpu.SP, cpu.Stack[0])
-	log.Println("\nMemory:")
-	for i := 0; i < len(cpu.Memory); i = i + 16 {
-		fmt.Println(cpu.GetMemory(i))
-	}
+	log.Println("\nMemory:\n" + cpu.GetAllMemory())
 	log.Printf("\nStack:\n" + cpu.GetStack())
 	dashboard.SetStatus(fmt.Sprintf("Program finished. R0 = %d; PC = %d, SP = %d, S[0] = %d\n", cpu.Registers[0], cpu.PC, cpu.SP, cpu.Stack[0]))
 	dashboard.UpdateAll()
@@ -103,11 +103,4 @@ func reset() {
 	cpu.Reset()
 	dashboard.SetStatus("CPU and memory reset")
 	dashboard.UpdateAll()
-}
-
-func printAllMemory() {
-	// Print contents of CPU Memory
-	for i := 0; i < len(cpu.Memory); i = i + 16 {
-		fmt.Println(cpu.GetMemory(i))
-	}
 }
