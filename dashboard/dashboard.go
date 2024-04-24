@@ -1,7 +1,6 @@
 package dashboard
 
 import (
-	"fmt"
 	"image/color"
 	"log"
 	"strconv"
@@ -16,18 +15,35 @@ import (
 	"fyne.io/fyne/v2/widget"
 )
 
-var CPUStatus string
+var (
+	c                                                     *cpusimple.CPU
+	CPUStatus                                             string
+	br0, br1, br2, br3, br4, br5, br6, br7, br8           binding.ExternalInt
+	br9, br10, br11, br12, br13, br14, br15, br16         binding.ExternalInt
+	br0s, br1s, br2s, br3s, br4s, br5s, br6s, br7s, br8s  *widget.Label
+	br9s, br10s, br11s, br12s, br13s, br14s, br15s, br16s *widget.Label
+	w                                                     fyne.Window
+	status                                                string
+	statusBarBound                                        binding.ExternalString
+	stackDisplay                                          string
+	stackLabelWidget                                      *widget.Label
+	//stackDisplayBound                                     binding.ExternalString
+)
 
 func New(cpu *cpusimple.CPU, load func(), run func(), step func(), halt func(), reset func()) fyne.Window {
 
+	c = cpu
 	a := app.NewWithID("simpleCPU")
-	w := a.NewWindow("Simple CPU Simulator")
+	w = a.NewWindow("Simple CPU Simulator")
 
-	statusBar := binding.NewString()
-	statusBar.Set("CPU status is displayed here.")
+	statusBarBound = binding.BindString(&status)
+	status = "CPU status is displayed here."
 
 	inputCPUClock := widget.NewEntry()
 	inputCPUClock.SetPlaceHolder("0.0")
+
+	//stackDisplayBound = binding.BindString(&stackDisplay)
+	stackDisplay = cpu.GetStack()
 
 	loadButton := widget.NewButton("Load", load)
 
@@ -39,44 +55,96 @@ func New(cpu *cpusimple.CPU, load func(), run func(), step func(), halt func(), 
 
 	resetButton := widget.NewButton("Reset", reset)
 
-	registerHeader := container.New(layout.NewHBoxLayout(), canvas.NewText("Register          Value", color.Black))
+	registerHeader := container.New(layout.NewHBoxLayout(), canvas.NewText("Registers", color.Black))
 
-	r0 := container.New(layout.NewHBoxLayout(), canvas.NewText("R0", color.Black), layout.NewSpacer(), canvas.NewText(fmt.Sprintf("%04x", cpu.Registers[0]&0xFFFF), color.Black))
-	r1 := container.New(layout.NewHBoxLayout(), canvas.NewText("R1", color.Black), layout.NewSpacer(), canvas.NewText(fmt.Sprintf("%04x", cpu.Registers[1]&0xFFFF), color.Black))
-	r2 := container.New(layout.NewHBoxLayout(), canvas.NewText("R2", color.Black), layout.NewSpacer(), canvas.NewText(fmt.Sprintf("%04x", cpu.Registers[2]&0xFFFF), color.Black))
-	r3 := container.New(layout.NewHBoxLayout(), canvas.NewText("R3", color.Black), layout.NewSpacer(), canvas.NewText(fmt.Sprintf("%04x", cpu.Registers[3]&0xFFFF), color.Black))
-	r4 := container.New(layout.NewHBoxLayout(), canvas.NewText("R4", color.Black), layout.NewSpacer(), canvas.NewText(fmt.Sprintf("%04x", cpu.Registers[4]&0xFFFF), color.Black))
-	r5 := container.New(layout.NewHBoxLayout(), canvas.NewText("R5", color.Black), layout.NewSpacer(), canvas.NewText(fmt.Sprintf("%04x", cpu.Registers[5]&0xFFFF), color.Black))
-	r6 := container.New(layout.NewHBoxLayout(), canvas.NewText("R6", color.Black), layout.NewSpacer(), canvas.NewText(fmt.Sprintf("%04x", cpu.Registers[6]&0xFFFF), color.Black))
-	r7 := container.New(layout.NewHBoxLayout(), canvas.NewText("R7", color.Black), layout.NewSpacer(), canvas.NewText(fmt.Sprintf("%04x", cpu.Registers[7]&0xFFFF), color.Black))
-	r8 := container.New(layout.NewHBoxLayout(), canvas.NewText("R8", color.Black), layout.NewSpacer(), canvas.NewText(fmt.Sprintf("%04x", cpu.Registers[8]&0xFFFF), color.Black))
-	r9 := container.New(layout.NewHBoxLayout(), canvas.NewText("R9", color.Black), layout.NewSpacer(), canvas.NewText(fmt.Sprintf("%04x", cpu.Registers[9]&0xFFFF), color.Black))
-	r10 := container.New(layout.NewHBoxLayout(), canvas.NewText("R10", color.Black), layout.NewSpacer(), canvas.NewText(fmt.Sprintf("%04x", cpu.Registers[10]&0xFFFF), color.Black))
-	r11 := container.New(layout.NewHBoxLayout(), canvas.NewText("R11", color.Black), layout.NewSpacer(), canvas.NewText(fmt.Sprintf("%04x", cpu.Registers[11]&0xFFFF), color.Black))
-	r12 := container.New(layout.NewHBoxLayout(), canvas.NewText("R12", color.Black), layout.NewSpacer(), canvas.NewText(fmt.Sprintf("%04x", cpu.Registers[12]&0xFFFF), color.Black))
-	r13 := container.New(layout.NewHBoxLayout(), canvas.NewText("R13", color.Black), layout.NewSpacer(), canvas.NewText(fmt.Sprintf("%04x", cpu.Registers[13]&0xFFFF), color.Black))
-	r14 := container.New(layout.NewHBoxLayout(), canvas.NewText("R14", color.Black), layout.NewSpacer(), canvas.NewText(fmt.Sprintf("%04x", cpu.Registers[14]&0xFFFF), color.Black))
-	r15 := container.New(layout.NewHBoxLayout(), canvas.NewText("R15", color.Black), layout.NewSpacer(), canvas.NewText(fmt.Sprintf("%04x", cpu.Registers[15]&0xFFFF), color.Black))
-	r16 := container.New(layout.NewHBoxLayout(), canvas.NewText("R16", color.Black), layout.NewSpacer(), canvas.NewText(fmt.Sprintf("%04x", cpu.Registers[16]&0xFFFF), color.Black))
+	br0 = binding.BindInt(&cpu.Registers[0])
+	br1 = binding.BindInt(&cpu.Registers[1])
+	br2 = binding.BindInt(&cpu.Registers[2])
+	br3 = binding.BindInt(&cpu.Registers[3])
+	br4 = binding.BindInt(&cpu.Registers[4])
+	br5 = binding.BindInt(&cpu.Registers[5])
+	br6 = binding.BindInt(&cpu.Registers[6])
+	br7 = binding.BindInt(&cpu.Registers[7])
+	br8 = binding.BindInt(&cpu.Registers[8])
+	br9 = binding.BindInt(&cpu.Registers[9])
+	br10 = binding.BindInt(&cpu.Registers[10])
+	br11 = binding.BindInt(&cpu.Registers[11])
+	br12 = binding.BindInt(&cpu.Registers[12])
+	br13 = binding.BindInt(&cpu.Registers[13])
+	br14 = binding.BindInt(&cpu.Registers[14])
+	br15 = binding.BindInt(&cpu.Registers[15])
+	br16 = binding.BindInt(&cpu.Registers[16])
+
+	br0s = widget.NewLabelWithData(binding.IntToStringWithFormat(br0, "R0: x%04x"))
+	br1s = widget.NewLabelWithData(binding.IntToStringWithFormat(br1, "R1: x%04x"))
+	br2s = widget.NewLabelWithData(binding.IntToStringWithFormat(br2, "R2: x%04x"))
+	br3s = widget.NewLabelWithData(binding.IntToStringWithFormat(br3, "R3: x%04x"))
+	br4s = widget.NewLabelWithData(binding.IntToStringWithFormat(br4, "R4: x%04x"))
+	br5s = widget.NewLabelWithData(binding.IntToStringWithFormat(br5, "R5: x%04x"))
+	br6s = widget.NewLabelWithData(binding.IntToStringWithFormat(br6, "R6: x%04x"))
+	br7s = widget.NewLabelWithData(binding.IntToStringWithFormat(br7, "R7: x%04x"))
+	br8s = widget.NewLabelWithData(binding.IntToStringWithFormat(br8, "R8: x%04x"))
+	br9s = widget.NewLabelWithData(binding.IntToStringWithFormat(br9, "R9: x%04x"))
+	br10s = widget.NewLabelWithData(binding.IntToStringWithFormat(br10, "R10: x%04x"))
+	br11s = widget.NewLabelWithData(binding.IntToStringWithFormat(br11, "R11: x%04x"))
+	br12s = widget.NewLabelWithData(binding.IntToStringWithFormat(br12, "R12: x%04x"))
+	br13s = widget.NewLabelWithData(binding.IntToStringWithFormat(br13, "R13: x%04x"))
+	br14s = widget.NewLabelWithData(binding.IntToStringWithFormat(br14, "R14: x%04x"))
+	br15s = widget.NewLabelWithData(binding.IntToStringWithFormat(br15, "R15: x%04x"))
+	br16s = widget.NewLabelWithData(binding.IntToStringWithFormat(br16, "R16: x%04x"))
+
+	r0 := container.New(layout.NewHBoxLayout(), br0s)
+	r1 := container.New(layout.NewHBoxLayout(), br1s)
+	r2 := container.New(layout.NewHBoxLayout(), br2s)
+	r3 := container.New(layout.NewHBoxLayout(), br3s)
+	r4 := container.New(layout.NewHBoxLayout(), br4s)
+	r5 := container.New(layout.NewHBoxLayout(), br5s)
+	r6 := container.New(layout.NewHBoxLayout(), br6s)
+	r7 := container.New(layout.NewHBoxLayout(), br7s)
+	r8 := container.New(layout.NewHBoxLayout(), br8s)
+	r9 := container.New(layout.NewHBoxLayout(), br9s)
+	r10 := container.New(layout.NewHBoxLayout(), br10s)
+	r11 := container.New(layout.NewHBoxLayout(), br11s)
+	r12 := container.New(layout.NewHBoxLayout(), br12s)
+	r13 := container.New(layout.NewHBoxLayout(), br13s)
+	r14 := container.New(layout.NewHBoxLayout(), br14s)
+	r15 := container.New(layout.NewHBoxLayout(), br15s)
+	r16 := container.New(layout.NewHBoxLayout(), br16s)
+
+	//stackHeader := container.New(layout.NewHBoxLayout(), canvas.NewText("Stack", color.Black))
+	stackHeader := widget.NewLabel("Stack")
+	stackHeader.TextStyle.Monospace = true
 
 	// Copy stack into string array and build list for display
-	stackContent := widget.NewList(
-		func() int {
-			return len(cpu.Stack)
-		},
-		func() fyne.CanvasObject {
-			stackHeader := widget.NewLabel("CPU Stack")
-			return stackHeader
-		},
-		func(i widget.ListItemID, o fyne.CanvasObject) {
-			t := cpu.Stack[i]
-			o.(*widget.Label).SetText(fmt.Sprintf("%04x", t&0xFFFF))
-		})
+	/* stackContent := widget.NewList(
+	func() int {
+		return len(cpu.Stack)
+	},
+	func() fyne.CanvasObject {
+		stackHeader := widget.NewLabel("CPU Stack")
+		return stackHeader
+	},
+	func(i widget.ListItemID, o fyne.CanvasObject) {
+		t := cpu.Stack[i]
+		o.(*widget.Label).SetText(fmt.Sprintf("%04x", t&0xFFFF))
+	}) */
 
-	stackContainer := container.New(
-		layout.NewMaxLayout(),
+	/* stackListBound = binding.BindIntList(&cpu.Stack)
+	stackList := widget.NewListWithData(stackListBound,
+		func() fyne.CanvasObject {
+			return widget.NewLabel("template")
+		},
+		func(i binding.DataItem, o fyne.CanvasObject) {
+			o.(*widget.Label).Bind(i.(binding.String))
+		}) */
+
+	/* stackContainer := container.New(
+		layout.NewHBoxLayout(),
 		stackContent,
-	)
+		stackList,
+	) */
+
+	stackDisplay = cpu.GetStack()
 
 	speedContainer := container.New(
 		layout.NewHBoxLayout(),
@@ -89,7 +157,7 @@ func New(cpu *cpusimple.CPU, load func(), run func(), step func(), halt func(), 
 				}
 			})),
 		canvas.NewText("Set clock speed in seconds. Zero sets clock to full speed.  ", color.Black),
-		canvas.NewText("    CPU Stack", color.Black),
+		//canvas.NewText("    CPU Stack", color.Black),
 		layout.NewSpacer(),
 	)
 
@@ -97,9 +165,7 @@ func New(cpu *cpusimple.CPU, load func(), run func(), step func(), halt func(), 
 
 	settingsContainer := container.New(layout.NewVBoxLayout(), buttonsContainer, speedContainer)
 
-	statusContainer := container.NewHBox(
-		widget.NewLabelWithData(statusBar),
-	)
+	statusContainer := container.NewHBox(widget.NewLabelWithData(statusBarBound))
 
 	memoryGrid := widget.NewTextGridFromString("Display memory grid here")
 	memoryContainer := container.New(
@@ -107,11 +173,26 @@ func New(cpu *cpusimple.CPU, load func(), run func(), step func(), halt func(), 
 		memoryGrid,
 	)
 
+	// stackContainer := container.New(layout.NewMaxLayout(), stackContent)
+
+	stackLabelWidget = widget.NewLabel(stackDisplay)
+	stackContainer := container.New(layout.NewVBoxLayout(), stackHeader, stackLabelWidget)
+
 	registerContainer := container.New(layout.NewVBoxLayout(), registerHeader, r0, r1, r2, r3, r4, r5, r6, r7, r8, r9, r10, r11, r12, r13, r14, r15, r16)
 
 	w.SetContent(container.NewBorder(settingsContainer, statusContainer, registerContainer, stackContainer, memoryContainer))
 
-	// w.ShowAndRun()
-
 	return w
+}
+
+func UpdateAll() {
+	br0.Reload()
+	stackDisplay = c.GetStack()
+	stackLabelWidget.Text = stackDisplay
+	stackLabelWidget.Refresh()
+}
+
+func SetStatus(s string) {
+	status = s
+	statusBarBound.Reload()
 }

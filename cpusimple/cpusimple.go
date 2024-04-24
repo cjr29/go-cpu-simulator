@@ -208,6 +208,16 @@ func (c *CPU) GetMemory(index int) string {
 	return line
 }
 
+// GetStack returns a formatted string of bytes beginning at SP(0)
+func (c *CPU) GetStack() string {
+	var s string
+	//s = "\nStack\n"
+	for i := 0; i < len(c.Stack); i++ {
+		s = s + fmt.Sprintf("%04d\n", c.Stack[i])
+	}
+	return s
+}
+
 // SetMemSize expands Memory slice to specified size and initializes to all zeros
 func (c *CPU) SetMemSize(size int) {
 	tempSlice := make([]byte, size)
