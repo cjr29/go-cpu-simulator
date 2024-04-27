@@ -4,6 +4,7 @@ import (
 	"image/color"
 	"log"
 	"strconv"
+	"strings"
 
 	"chrisriddick.net/cpusimple"
 	"fyne.io/fyne/v2"
@@ -24,27 +25,42 @@ var (
 	br9s, br10s, br11s, br12s, br13s, br14s, br15s, br16s *widget.Label
 	w                                                     fyne.Window
 	status                                                string
-	statusBarBound                                        binding.ExternalString
-	stackDisplay                                          string
-	stackLabelWidget                                      *widget.Label
-	memoryDisplay                                         string
-	//memoryGrid                                            *widget.Label
-	memoryGridLabel *widget.Label
-	memoryLabel     *widget.Label
-	//memoryLabelWidget                                     *widget.Label
+	//statusBarBound                                        binding.ExternalString
+	statusScroll *widget.TextGrid
+	//statusScrollBar *fyne.Container
+	// statusScroller   = container.NewVScroll
+	stackDisplay     string
+	stackLabelWidget *widget.Label
+	memoryDisplay    string
+	memoryGridLabel  *widget.Label
+	memoryLabel      *widget.Label
+	inputCPUClock    *widget.Entry
+
+	console         *fyne.Container
+	consoleScroller *fyne.Container
 )
 
-func New(cpu *cpusimple.CPU, load func(), run func(), step func(), halt func(), reset func()) fyne.Window {
+func New(cpu *cpusimple.CPU, load func(), run func(), step func(), halt func(), reset func(), pause func()) fyne.Window {
 
 	c = cpu
 	a := app.NewWithID("simpleCPU")
 	w = a.NewWindow("Simple CPU Simulator")
 
-	statusBarBound = binding.BindString(&status)
+	//statusBarBound = binding.BindString(&status)
 	status = "CPU status is displayed here."
+	statusScroll = widget.NewTextGrid()
+	statusScroll.ShowLineNumbers = true
+	statusScroll.SetText(status)
+	statusScrolling := container.NewScroll(statusScroll)
+	//statusScrollBar := container.NewVBox()
+	//statusScroller := container.NewVScoll(statusScrollBar)
+	console = container.NewVBox()
+	consoleScroller = container.NewVScroll(console)
 
-	inputCPUClock := widget.NewEntry()
-	inputCPUClock.SetPlaceHolder("0.0")
+	cpu.SetRunning(true)
+
+	inputCPUClock = widget.NewEntry()
+	inputCPUClock.SetText("0")
 
 	loadButton := widget.NewButton("Load", load)
 
@@ -56,7 +72,10 @@ func New(cpu *cpusimple.CPU, load func(), run func(), step func(), halt func(), 
 
 	resetButton := widget.NewButton("Reset", reset)
 
+	pauseButton := widget.NewButton("Pause", pause)
+
 	registerHeader := container.New(layout.NewHBoxLayout(), canvas.NewText("Registers", color.Black))
+	registerHeader2 := container.New(layout.NewHBoxLayout(), canvas.NewText(" ", color.Black))
 
 	br0 = binding.BindInt(&cpu.Registers[0])
 	br1 = binding.BindInt(&cpu.Registers[1])
@@ -112,7 +131,8 @@ func New(cpu *cpusimple.CPU, load func(), run func(), step func(), halt func(), 
 	r15 := container.New(layout.NewHBoxLayout(), br15s)
 	r16 := container.New(layout.NewHBoxLayout(), br16s)
 
-	registerContainer := container.New(layout.NewVBoxLayout(), registerHeader, r0, r1, r2, r3, r4, r5, r6, r7, r8, r9, r10, r11, r12, r13, r14, r15, r16)
+	registerContainerCol1 := container.New(layout.NewVBoxLayout(), registerHeader, r0, r1, r2, r3, r4, r5, r6, r7, r8)
+	registerContainerCol2 := container.New(layout.NewVBoxLayout(), registerHeader2, r9, r10, r11, r12, r13, r14, r15, r16)
 
 	// Stack
 	stackHeader := widget.NewLabel("Stack\nContent")
@@ -136,21 +156,29 @@ func New(cpu *cpusimple.CPU, load func(), run func(), step func(), halt func(), 
 		layout.NewHBoxLayout(),
 		layout.NewSpacer(),
 		container.NewHBox(
-			inputCPUClock, widget.NewButton("Save", func() {
-				log.Println("Input value:", inputCPUClock)
-				if s, err := strconv.ParseFloat(inputCPUClock.Text, 64); err == nil {
+			canvas.NewText("Clock = ", color.Black),
+			inputCPUClock,
+			canvas.NewText("sec  ", color.Black),
+			widget.NewButton("Save", func() {
+				if s, err := strconv.ParseInt(inputCPUClock.Text, 0, 32); err == nil {
 					cpu.Clock = s
 				}
+				log.Println("Clock speed input value:", cpu.Clock, " seconds")
+				stringValue := strconv.FormatInt(cpu.Clock, 10)
+				SetStatus("Clock set to " + stringValue + " seconds")
 			})),
 		canvas.NewText("Set clock speed in seconds. Zero sets clock to full speed.  ", color.Black),
 		layout.NewSpacer(),
 	)
 
-	buttonsContainer := container.New(layout.NewHBoxLayout(), loadButton, runButton, haltButton, stepButton, resetButton)
+	buttonsContainer := container.New(layout.NewHBoxLayout(), loadButton, runButton, haltButton, stepButton, resetButton, pauseButton)
 
 	settingsContainer := container.New(layout.NewVBoxLayout(), buttonsContainer, speedContainer)
 
-	statusContainer := container.NewHBox(widget.NewLabelWithData(statusBarBound))
+	//statusContainer := container.NewVBox(widget.NewLabelWithData(statusBarBound), statusScrolling)
+	statusContainer := container.NewVBox(statusScrolling, ConsoleScroller)
+
+	registerContainer := container.NewHBox(registerContainerCol1, registerContainerCol2)
 
 	w.SetContent(container.NewBorder(settingsContainer, statusContainer, registerContainer, stackContainer, memoryContainer))
 
@@ -158,16 +186,55 @@ func New(cpu *cpusimple.CPU, load func(), run func(), step func(), halt func(), 
 }
 
 func UpdateAll() {
+	// log.Println("UpdateAll():\n" + memoryDisplay)
 	br0.Reload()
+	br1.Reload()
+	br2.Reload()
+	br3.Reload()
+	br4.Reload()
+	br5.Reload()
+	br6.Reload()
+	br7.Reload()
+	br8.Reload()
+	br9.Reload()
+	br10.Reload()
+	br11.Reload()
+	br12.Reload()
+	br13.Reload()
+	br14.Reload()
+	br15.Reload()
+	br16.Reload()
 	stackDisplay = c.GetStack()
 	stackLabelWidget.Text = stackDisplay
 	memoryDisplay = c.GetAllMemory()
-	log.Println("UpdateAll():\n" + memoryDisplay)
 	memoryGridLabel.SetText(memoryDisplay)
 	stackLabelWidget.Refresh()
+	//statusBarBound.Reload()
 }
 
 func SetStatus(s string) {
 	status = s
-	statusBarBound.Reload()
+	// statusBarBound.Reload()
+	statusScroll.SetText(strings.TrimPrefix(statusScroll.Text()+"\n"+status, "\n"))
+	statusScroll.Refresh()
+	ConsoleWrite(status)
+}
+
+func ConsoleWrite(text string) {
+	console.Add(&canvas.Text{
+		Text:      text,
+		Color:     color.White,
+		TextSize:  12,
+		TextStyle: fyne.TextStyle{Monospace: true},
+	})
+
+	if len(console.Objects) > 100 {
+		console.Remove(console.Objects[0])
+	}
+	delta := (console.Size().Height - consoleScroller.Size().Height) - consoleScroller.Offset.Y
+
+	if delta < 50 {
+		consoleScroller.ScrollToBottom()
+	}
+	console.Refresh()
 }

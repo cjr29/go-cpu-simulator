@@ -5,6 +5,7 @@ import (
 	"log"
 	"strconv"
 	"strings"
+	"time"
 )
 
 // The constants below are masks for corresponding machine instructions
@@ -21,13 +22,15 @@ const (
 
 // CPU is the central structure representing the processor with its resources
 type CPU struct {
-	Registers [17]int
-	Labels    [16]int
-	PC        int // Program counter
-	SP        int // Stack pointer
-	Memory    []byte
-	Stack     []int
-	Clock     float64 // clock speed. If = 0, full speed
+	Registers   [17]int
+	Labels      [16]int
+	PC          int // Program counter
+	SP          int // Stack pointer
+	Memory      []byte
+	Stack       []int
+	Clock       int64 // clock delay in seconds. If = 0, full speed
+	HaltFlag    bool  // Halt flag used to stop CPU
+	RunningFlag bool  // Indicates if CPU is executing a program
 }
 
 // FetchInstruction is a dispatcher function, which takes care of properly
@@ -99,6 +102,8 @@ func (c *CPU) Preprocess(code []byte, codeLength int) {
 func (c *CPU) Reset() {
 	c.PC = 0
 	c.SP = 0
+	c.RunningFlag = false
+	c.HaltFlag = false
 
 	for i := 0; i < len(c.Memory); i++ {
 		c.Memory[i] = 0
@@ -114,25 +119,54 @@ func (c *CPU) Reset() {
 	}
 }
 
-// Run resets the CPU, carries out a sequence of instruction and finally returns
+// ***************** NOT USED **************
+/* // Run resets the CPU, carries out a sequence of instruction and finally returns
 // the contents of R0
 func (c *CPU) Run(code []byte, codeLength int) int {
 	c.Reset()
 	c.Preprocess(code, codeLength)
 	c.Load(code, codeLength)
+	// log.Println("\nMemory:\n" + c.GetAllMemory())
 	for c.PC < codeLength {
 		c.FetchInstruction(c.Memory[0:])
+		//log.Println("Sleep ", c.Clock, " seconds")
+		time.Sleep(time.Duration(c.Clock) * time.Second)
+		//log.Printf("Step... R0 = %d; PC = %d, SP = %d, S[0] = %d\n", c.Registers[0], c.PC, c.SP, c.Stack[0])
 	}
+		log.Printf("Program finished. R0 = %d; PC = %d, SP = %d, S[0] = %d\n", c.Registers[0], c.PC, c.SP, c.Stack[0])
+	   	log.Println("\nMemory:\n" + c.GetAllMemory())
+	   	log.Printf("\nStack:\n" + c.GetStack())
 	return c.Registers[0]
+} */
+
+// Run resets the CPU, carries out a sequence of instruction and finally returns
+// the contents of R0
+func (c *CPU) RunFromPC(codeLength int) string {
+	// Be sure that a program has been loaded
+	for c.PC < codeLength {
+		if !c.RunningFlag {
+			log.Println("Program paused.")
+			return "CPU paused"
+		}
+		c.FetchInstruction(c.Memory[0:])
+		// log.Println("RunFromPC: Sleep ", c.Clock, " seconds")
+		time.Sleep(time.Duration(c.Clock) * time.Second)
+		// log.Printf("RunFromPC: R0 = %d; PC = %d, SP = %d, S[0] = %d\n", c.Registers[0], c.PC, c.SP, c.Stack[0])
+	}
+	c.SetRunning(false)
+	/* 	log.Printf("Program finished. R0 = %d; PC = %d, SP = %d, S[0] = %d\n", c.Registers[0], c.PC, c.SP, c.Stack[0])
+	   	log.Println("\nMemory:\n" + c.GetAllMemory())
+	   	log.Printf("\nStack:\n" + c.GetStack()) */
+	return "Execution complete"
 }
 
-// RunProgram carries out a sequence of instructions beginning in memory at PC location and finally returns
-// the contents of R0
-func (c *CPU) RunProgram(programLength int) int {
-	for c.PC < programLength {
-		c.FetchInstruction(c.Memory[0:])
+// Be sure there is a program in memory
+func (c *CPU) VerifyProgramInMemory() bool {
+	// Be sure that a program has been loaded by testing  the first two bytes
+	if (c.Memory[0] == 0) && (c.Memory[1] == 0) {
+		return false
 	}
-	return c.Registers[0]
+	return true
 }
 
 // Load Memory with preprocessed program
@@ -140,7 +174,7 @@ func (c *CPU) Load(program []byte, programLength int) {
 	for i := 0; i < programLength; i++ {
 		c.Memory[i] = program[i]
 	}
-	log.Println("Load: " + fmt.Sprintf("%02x ", c.Memory[99]))
+	// log.Println("Load: " + fmt.Sprintf("%02x ", c.Memory[99]))
 }
 
 // Translate a symbolic instruction mnemonic into a byte
@@ -261,6 +295,30 @@ func (c *CPU) SetStackSize(size int) {
 	c.Stack = append(c.Stack, tempStackSlice...)
 }
 
+// Set CPU clock delay
+func (c *CPU) SetClock(delay int64) {
+	c.Clock = delay
+}
+
+// Set Halt Flag
+func (c *CPU) SetHalt(flag bool) {
+	c.HaltFlag = flag
+}
+
+// Get Halt Flag
+func (c *CPU) GetHalt() bool {
+	return c.HaltFlag
+}
+
+// Set Running Flag
+func (c *CPU) SetRunning(flag bool) {
+	c.RunningFlag = flag
+}
+
+// Get Running Flag
+func (c *CPU) GetRunning() bool {
+	return c.RunningFlag
+}
 func NewCPU() *CPU {
 	return &CPU{}
 }
