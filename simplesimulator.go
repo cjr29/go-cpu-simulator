@@ -17,8 +17,7 @@ const (
 )
 
 var (
-	cpu = *cpusimple.NewCPU()
-
+	cpu     = *cpusimple.NewCPU()
 	program = []byte{
 		0x00, 0x81, 0xa0, 0x0b, 0x81, 0xa2, 0x01, 0x81, 0xa4, 0xe0,
 		0x80, 0xa1, 0x24, 0x81, 0xa0, 0x01, 0x24, 0x81, 0xa4, 0x42,
@@ -43,6 +42,7 @@ var (
 
 func main() {
 
+	cpu.InitChan() // Initialize CPU status channel for goroutines
 	cpu.SetMemSize(memSize)
 	cpu.SetStackSize(stackSize)
 	cpu.SetClock(0)
@@ -65,10 +65,10 @@ func load() {
 	dashboard.SetStatus("Program loaded.")
 	dashboard.UpdateAll()
 	go monitorCPUStatus() // Start CPU monitor in background
+	go g_monitorCPUStatus()
 }
 
 func run() {
-	log.Println("Running loaded program, standby...")
 	result := cpu.VerifyProgramInMemory()
 	if !result {
 		dashboard.SetStatus("ERROR: No program loaded.")
@@ -77,8 +77,11 @@ func run() {
 	}
 	if !cpu.GetRunning() {
 		go monitorCPUStatus()
+		go g_monitorCPUStatus()
 		cpu.SetRunning(true)
 	}
+	log.Println("Running loaded program, standby...")
+	dashboard.SetStatus("Running loaded program, standby...")
 	go cpu.RunFromPC(len(program))
 }
 
@@ -149,4 +152,11 @@ func monitorCPUStatus() {
 		}
 		time.Sleep(time.Duration(3) * time.Second)
 	}
+}
+
+func g_monitorCPUStatus() {
+	// Respond when channel message is received from CPU
+	s := <-cpu.CPUStatus
+	log.Println("From channel monitor: " + s)
+	dashboard.SetStatus("From channel monitor: " + s)
 }

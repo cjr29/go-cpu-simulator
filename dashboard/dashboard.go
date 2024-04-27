@@ -4,7 +4,6 @@ import (
 	"image/color"
 	"log"
 	"strconv"
-	"strings"
 
 	"chrisriddick.net/cpusimple"
 	"fyne.io/fyne/v2"
@@ -36,9 +35,12 @@ var (
 	memoryLabel      *widget.Label
 	inputCPUClock    *widget.Entry
 
-	console         *fyne.Container
-	consoleScroller *fyne.Container
+	//console         *fyne.Container
+	//consoleScroller *fyne.Container
 )
+
+var Console = container.NewVBox()
+var ConsoleScroller = container.NewVScroll(Console)
 
 func New(cpu *cpusimple.CPU, load func(), run func(), step func(), halt func(), reset func(), pause func()) fyne.Window {
 
@@ -48,14 +50,12 @@ func New(cpu *cpusimple.CPU, load func(), run func(), step func(), halt func(), 
 
 	//statusBarBound = binding.BindString(&status)
 	status = "CPU status is displayed here."
-	statusScroll = widget.NewTextGrid()
-	statusScroll.ShowLineNumbers = true
-	statusScroll.SetText(status)
-	statusScrolling := container.NewScroll(statusScroll)
+	// statusScroll = widget.NewTextGrid()
+	// statusScroll.ShowLineNumbers = true
+	// statusScroll.SetText(status)
+	// statusScrolling := container.NewScroll(statusScroll)
 	//statusScrollBar := container.NewVBox()
 	//statusScroller := container.NewVScoll(statusScrollBar)
-	console = container.NewVBox()
-	consoleScroller = container.NewVScroll(console)
 
 	cpu.SetRunning(true)
 
@@ -176,7 +176,7 @@ func New(cpu *cpusimple.CPU, load func(), run func(), step func(), halt func(), 
 	settingsContainer := container.New(layout.NewVBoxLayout(), buttonsContainer, speedContainer)
 
 	//statusContainer := container.NewVBox(widget.NewLabelWithData(statusBarBound), statusScrolling)
-	statusContainer := container.NewVBox(statusScrolling, ConsoleScroller)
+	statusContainer := container.NewVBox(ConsoleScroller)
 
 	registerContainer := container.NewHBox(registerContainerCol1, registerContainerCol2)
 
@@ -215,26 +215,26 @@ func UpdateAll() {
 func SetStatus(s string) {
 	status = s
 	// statusBarBound.Reload()
-	statusScroll.SetText(strings.TrimPrefix(statusScroll.Text()+"\n"+status, "\n"))
-	statusScroll.Refresh()
+	//statusScroll.SetText(strings.TrimPrefix(statusScroll.Text()+"\n"+status, "\n"))
+	//statusScroll.Refresh()
 	ConsoleWrite(status)
 }
 
 func ConsoleWrite(text string) {
-	console.Add(&canvas.Text{
+	Console.Add(&canvas.Text{
 		Text:      text,
-		Color:     color.White,
+		Color:     color.Black,
 		TextSize:  12,
 		TextStyle: fyne.TextStyle{Monospace: true},
 	})
 
-	if len(console.Objects) > 100 {
-		console.Remove(console.Objects[0])
+	if len(Console.Objects) > 100 {
+		Console.Remove(Console.Objects[0])
 	}
-	delta := (console.Size().Height - consoleScroller.Size().Height) - consoleScroller.Offset.Y
+	delta := (Console.Size().Height - ConsoleScroller.Size().Height) - ConsoleScroller.Offset.Y
 
 	if delta < 50 {
-		consoleScroller.ScrollToBottom()
+		ConsoleScroller.ScrollToBottom()
 	}
-	console.Refresh()
+	Console.Refresh()
 }

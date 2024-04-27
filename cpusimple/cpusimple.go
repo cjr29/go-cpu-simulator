@@ -28,9 +28,10 @@ type CPU struct {
 	SP          int // Stack pointer
 	Memory      []byte
 	Stack       []int
-	Clock       int64 // clock delay in seconds. If = 0, full speed
-	HaltFlag    bool  // Halt flag used to stop CPU
-	RunningFlag bool  // Indicates if CPU is executing a program
+	Clock       int64       // clock delay in seconds. If = 0, full speed
+	HaltFlag    bool        // Halt flag used to stop CPU
+	RunningFlag bool        // Indicates if CPU is executing a program
+	CPUStatus   chan string // Channel for passing status to monitor goroutines
 }
 
 // FetchInstruction is a dispatcher function, which takes care of properly
@@ -119,34 +120,15 @@ func (c *CPU) Reset() {
 	}
 }
 
-// ***************** NOT USED **************
-/* // Run resets the CPU, carries out a sequence of instruction and finally returns
-// the contents of R0
-func (c *CPU) Run(code []byte, codeLength int) int {
-	c.Reset()
-	c.Preprocess(code, codeLength)
-	c.Load(code, codeLength)
-	// log.Println("\nMemory:\n" + c.GetAllMemory())
-	for c.PC < codeLength {
-		c.FetchInstruction(c.Memory[0:])
-		//log.Println("Sleep ", c.Clock, " seconds")
-		time.Sleep(time.Duration(c.Clock) * time.Second)
-		//log.Printf("Step... R0 = %d; PC = %d, SP = %d, S[0] = %d\n", c.Registers[0], c.PC, c.SP, c.Stack[0])
-	}
-		log.Printf("Program finished. R0 = %d; PC = %d, SP = %d, S[0] = %d\n", c.Registers[0], c.PC, c.SP, c.Stack[0])
-	   	log.Println("\nMemory:\n" + c.GetAllMemory())
-	   	log.Printf("\nStack:\n" + c.GetStack())
-	return c.Registers[0]
-} */
-
 // Run resets the CPU, carries out a sequence of instruction and finally returns
-// the contents of R0
-func (c *CPU) RunFromPC(codeLength int) string {
+// with a string indicating status
+func (c *CPU) RunFromPC(codeLength int) {
 	// Be sure that a program has been loaded
 	for c.PC < codeLength {
 		if !c.RunningFlag {
+			c.CPUStatus <- "Program paused ..., press Step or Run to continue."
 			log.Println("Program paused.")
-			return "CPU paused"
+			return
 		}
 		c.FetchInstruction(c.Memory[0:])
 		// log.Println("RunFromPC: Sleep ", c.Clock, " seconds")
@@ -157,7 +139,8 @@ func (c *CPU) RunFromPC(codeLength int) string {
 	/* 	log.Printf("Program finished. R0 = %d; PC = %d, SP = %d, S[0] = %d\n", c.Registers[0], c.PC, c.SP, c.Stack[0])
 	   	log.Println("\nMemory:\n" + c.GetAllMemory())
 	   	log.Printf("\nStack:\n" + c.GetStack()) */
-	return "Execution complete"
+	c.CPUStatus <- "Program execution complete."
+	log.Println("Program execution complete.")
 }
 
 // Be sure there is a program in memory
@@ -319,6 +302,12 @@ func (c *CPU) SetRunning(flag bool) {
 func (c *CPU) GetRunning() bool {
 	return c.RunningFlag
 }
+
+// Initialize CPUStatus channel
+func (c *CPU) InitChan() {
+	c.CPUStatus = make(chan string) // Set up un-buffered channel for CPU status
+}
+
 func NewCPU() *CPU {
 	return &CPU{}
 }
