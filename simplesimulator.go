@@ -12,8 +12,8 @@ import (
 )
 
 const (
-	memSize   = 128
-	stackSize = 10
+	memSize   = 1024
+	stackSize = 100
 )
 
 var (
