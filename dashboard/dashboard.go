@@ -3,6 +3,7 @@ package dashboard
 import (
 	"image/color"
 	"log"
+	"os"
 	"strconv"
 
 	"chrisriddick.net/cpusimple"
@@ -16,6 +17,7 @@ import (
 )
 
 var (
+	logger                                                *log.Logger
 	c                                                     *cpusimple.CPU
 	CPUStatus                                             string
 	br0, br1, br2, br3, br4, br5, br6, br7, br8           binding.ExternalInt
@@ -44,6 +46,7 @@ var ConsoleScroller = container.NewVScroll(Console)
 
 func New(cpu *cpusimple.CPU, load func(), run func(), step func(), halt func(), reset func(), pause func()) fyne.Window {
 
+	logger = log.New(os.Stdout, "INFO: ", log.Ldate|log.Ltime)
 	c = cpu
 	a := app.NewWithID("simpleCPU")
 	w = a.NewWindow("Simple CPU Simulator")
@@ -163,7 +166,7 @@ func New(cpu *cpusimple.CPU, load func(), run func(), step func(), halt func(), 
 				if s, err := strconv.ParseInt(inputCPUClock.Text, 0, 32); err == nil {
 					cpu.Clock = s
 				}
-				log.Println("Clock speed input value:", cpu.Clock, " seconds")
+				logger.Println("Clock speed input value:", cpu.Clock, " seconds")
 				stringValue := strconv.FormatInt(cpu.Clock, 10)
 				SetStatus("Clock set to " + stringValue + " seconds")
 			})),
@@ -186,7 +189,7 @@ func New(cpu *cpusimple.CPU, load func(), run func(), step func(), halt func(), 
 }
 
 func UpdateAll() {
-	// log.Println("UpdateAll():\n" + memoryDisplay)
+	// logger.Println("UpdateAll():\n" + memoryDisplay)
 	br0.Reload()
 	br1.Reload()
 	br2.Reload()

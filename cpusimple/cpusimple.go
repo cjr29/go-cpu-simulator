@@ -3,6 +3,7 @@ package cpusimple
 import (
 	"fmt"
 	"log"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -19,6 +20,8 @@ const (
 	MaskGoto  = 0xc0
 	MaskLabel = 0xe0
 )
+
+var logger *log.Logger
 
 // CPU is the central structure representing the processor with its resources
 type CPU struct {
@@ -127,20 +130,20 @@ func (c *CPU) RunFromPC(codeLength int) {
 	for c.PC < codeLength {
 		if !c.RunningFlag {
 			c.CPUStatus <- "Program paused ..., press Step or Run to continue."
-			log.Println("Program paused.")
+			logger.Println("Program paused.")
 			return
 		}
 		c.FetchInstruction(c.Memory[0:])
-		// log.Println("RunFromPC: Sleep ", c.Clock, " seconds")
+		// logger.Println("RunFromPC: Sleep ", c.Clock, " seconds")
 		time.Sleep(time.Duration(c.Clock) * time.Second)
 		// log.Printf("RunFromPC: R0 = %d; PC = %d, SP = %d, S[0] = %d\n", c.Registers[0], c.PC, c.SP, c.Stack[0])
 	}
 	c.SetRunning(false)
 	/* 	log.Printf("Program finished. R0 = %d; PC = %d, SP = %d, S[0] = %d\n", c.Registers[0], c.PC, c.SP, c.Stack[0])
-	   	log.Println("\nMemory:\n" + c.GetAllMemory())
+	   	logger.Println("\nMemory:\n" + c.GetAllMemory())
 	   	log.Printf("\nStack:\n" + c.GetStack()) */
 	c.CPUStatus <- "Program execution complete."
-	log.Println("Program execution complete.")
+	logger.Println("Program execution complete.")
 }
 
 // Be sure there is a program in memory
@@ -157,7 +160,7 @@ func (c *CPU) Load(program []byte, programLength int) {
 	for i := 0; i < programLength; i++ {
 		c.Memory[i] = program[i]
 	}
-	// log.Println("Load: " + fmt.Sprintf("%02x ", c.Memory[99]))
+	// logger.Println("Load: " + fmt.Sprintf("%02x ", c.Memory[99]))
 }
 
 // Translate a symbolic instruction mnemonic into a byte
@@ -232,8 +235,8 @@ func (c *CPU) GetAllMemory() string {
 	var line string
 	blocks := len(c.Memory) / 16
 	remainder := len(c.Memory) % 16
-	//log.Println("Blocks = ", blocks)
-	//log.Println("Remainder = ", remainder)
+	//logger.Println("Blocks = ", blocks)
+	//logger.Println("Remainder = ", remainder)
 	k := 0
 	for j := 0; j < blocks; j++ {
 		for i := k; i < k+16; i++ {
@@ -309,5 +312,6 @@ func (c *CPU) InitChan() {
 }
 
 func NewCPU() *CPU {
+	logger = log.New(os.Stdout, "INFO: ", log.Ldate|log.Ltime)
 	return &CPU{}
 }
