@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+
 	"log"
 	"os"
 	"time"
@@ -12,8 +13,8 @@ import (
 )
 
 const (
-	memSize   = 1024
-	stackSize = 100
+	memSize   = 256
+	stackSize = 16
 )
 
 var (
@@ -44,6 +45,7 @@ var (
 func main() {
 
 	logger = log.New(os.Stdout, "INFO: ", log.Ldate|log.Ltime)
+	//log.SetOutput(io.Discard)
 
 	cpu.InitChan() // Initialize CPU status channel for goroutines
 	cpu.SetMemSize(memSize)

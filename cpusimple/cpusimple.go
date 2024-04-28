@@ -21,7 +21,7 @@ const (
 	MaskLabel = 0xe0
 )
 
-var logger *log.Logger
+var logger *log.Logger = log.New(os.Stdout, "INFO: ", log.Ldate|log.Ltime)
 
 // CPU is the central structure representing the processor with its resources
 type CPU struct {
@@ -121,6 +121,17 @@ func (c *CPU) Reset() {
 	for i := 0; i < len(c.Stack); i++ {
 		c.Stack[i] = 0
 	}
+}
+
+// Run resets the CPU, carries out a sequence of instruction and finally returns
+// the contents of R0
+func (c *CPU) Run(code []byte, codeLength int) int {
+	c.Reset()
+	c.Preprocess(code, codeLength)
+	for c.PC < codeLength {
+		c.FetchInstruction(code)
+	}
+	return c.Registers[0]
 }
 
 // Run resets the CPU, carries out a sequence of instruction and finally returns

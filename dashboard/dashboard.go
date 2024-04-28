@@ -68,9 +68,11 @@ func New(cpu *cpusimple.CPU, load func(), run func(), step func(), halt func(), 
 	//registerHeader := container.New(layout.NewHBoxLayout(), canvas.NewText("Registers", color.Black))
 	registerHeader := widget.NewLabel("Registers\nContent")
 	registerHeader.TextStyle.Monospace = true
+	registerHeader.TextStyle.Bold = true
 	//registerHeader2 := container.New(layout.NewHBoxLayout(), canvas.NewText(" ", color.Black))
 	registerHeader2 := widget.NewLabel(" ")
 	registerHeader2.TextStyle.Monospace = true
+	registerHeader2.TextStyle.Bold = true
 
 	br0 = binding.BindInt(&cpu.Registers[0])
 	br1 = binding.BindInt(&cpu.Registers[1])
@@ -149,6 +151,7 @@ func New(cpu *cpusimple.CPU, load func(), run func(), step func(), halt func(), 
 	// Stack
 	stackHeader := widget.NewLabel("Stack\nContent")
 	stackHeader.TextStyle.Monospace = true
+	stackHeader.TextStyle.Monospace = true
 	stackDisplay = cpu.GetStack()
 	stackLabelWidget = widget.NewLabel(stackDisplay)
 	stackContainer := container.New(layout.NewVBoxLayout(), stackHeader, stackLabelWidget)
@@ -158,11 +161,22 @@ func New(cpu *cpusimple.CPU, load func(), run func(), step func(), halt func(), 
 	memoryLabel = widget.NewLabel("Contents of Memory:\n")
 	memoryLabel.TextStyle.Monospace = true
 	memoryGridLabel = widget.NewLabel(memoryDisplay)
+	// var memoryWindow = container.NewVBox()
+	// var memoryScroller = container.NewVScroll(memoryWindow)
+	// memoryWindow.Add(&canvas.Text{
+	// 	Text:      memoryDisplay,
+	// 	Color:     color.Black,
+	// 	TextSize:  12,
+	// 	TextStyle: fyne.TextStyle{Monospace: true},
+	// })
 	memoryContainer := container.New(
 		layout.NewVBoxLayout(),
 		memoryLabel,
 		memoryGridLabel,
+		//memoryScroller,
 	)
+
+	//memoryContainer := newMemoryContainer(&memoryDisplay)
 
 	// Speed entry
 	speedContainer := container.New(
