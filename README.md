@@ -77,4 +77,4 @@ During the implementation of the UI, I realized that once a CPU entered the inst
 This re-architecting of the simulator now supports the introduction of more complex CPU designs. The present implentation has only eight instructions and does not have a NOP or HALT instruction. Running a program requires the simulator to know how long the program is in order to stop before running on indefinitely or generation a segmentation fault. Also, the simple CPU mixes bytes and ints, whereas a true CPU works on byte and words. A word is defined to be a specific number of bits, usually 16, 32, or 64. I changed the GUI display to show everything in hexadecimal rather than integers to better show what is happening inside the simulator. Also, I copy the program into memory space and run from there as a real CPU would do. The stack should also be placed in memory, and that will be a future update.
 
 Here is a sample of what you will see on the dashboard
-![Dashboard](dashboard.jpg)
+![Dashboard](https://github.com/cjr29/go-cpu-simulator.git/dashboard.png "Simple CPU Dashboard")
