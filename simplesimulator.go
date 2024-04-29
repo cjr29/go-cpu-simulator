@@ -45,7 +45,6 @@ var (
 func main() {
 
 	logger = log.New(os.Stdout, "INFO: ", log.Ldate|log.Ltime)
-	//log.SetOutput(io.Discard)
 
 	cpu.InitChan() // Initialize CPU status channel for goroutines
 	cpu.SetMemSize(memSize)
@@ -66,7 +65,7 @@ func load() {
 	cpu.Reset()
 	cpu.Load(program, len(program))
 	cpu.Preprocess(program, len(program))
-	logger.Println("Program loaded")
+	//logger.Println("Program loaded")
 	dashboard.SetStatus("Program loaded.")
 	dashboard.UpdateAll()
 	go monitorCPUStatus() // Start CPU monitor in background
@@ -77,7 +76,7 @@ func run() {
 	result := cpu.VerifyProgramInMemory()
 	if !result {
 		dashboard.SetStatus("ERROR: No program loaded.")
-		logger.Println("ERROR: No program loaded.")
+		//logger.Println("ERROR: No program loaded.")
 		return
 	}
 	if !cpu.GetRunning() {
@@ -85,17 +84,17 @@ func run() {
 		go g_monitorCPUStatus()
 		cpu.SetRunning(true)
 	}
-	logger.Println("Running loaded program, standby...")
+	//logger.Println("Running loaded program, standby...")
 	dashboard.SetStatus("Running loaded program, standby...")
 	go cpu.RunFromPC(len(program))
 }
 
 func step() {
-	logger.Println("Single-step in program.")
+	//logger.Println("Single-step in program.")
 	result := cpu.VerifyProgramInMemory()
 	if !result {
 		dashboard.SetStatus("ERROR: No program loaded.")
-		logger.Println("ERROR: No program loaded.")
+		//logger.Println("ERROR: No program loaded.")
 		return
 	}
 	cpu.SetRunning(true)
@@ -106,11 +105,10 @@ func step() {
 		dashboard.SetStatus(fmt.Sprintf("Step: PC = %d, SP = %d, S[0] = %d\n", cpu.PC, cpu.SP, cpu.Stack[0]))
 		dashboard.UpdateAll()
 		cpu.SetRunning(false)
-		// logger.Println("Sleep ", cpu.Clock, " seconds")
-		// time.Sleep(time.Duration(cpu.Clock) * time.Second)
+		// //logger.Println("Sleep ", cpu.Clock, " seconds")
 	} else {
-		logger.Println("End of memory reached, reset and load new program, or press halt to quit application.")
-		log.Printf("End of memory, R0 = %d; PC = %d, SP = %d, S[0] = %d\n", cpu.Registers[0], cpu.PC, cpu.SP, cpu.Stack[0])
+		//logger.Println("End of memory reached, reset and load new program, or press halt to quit application.")
+		//logger.Printf("End of memory, R0 = %d; PC = %d, SP = %d, S[0] = %d\n", cpu.Registers[0], cpu.PC, cpu.SP, cpu.Stack[0])
 		dashboard.SetStatus(fmt.Sprintf("End of memory reached, reset and load new program, or press halt. PC = %d, SP = %d, S[0] = %d\n", cpu.PC, cpu.SP, cpu.Stack[0]))
 		dashboard.UpdateAll()
 		dashboard.UpdateAll()
@@ -119,7 +117,7 @@ func step() {
 }
 
 func halt() {
-	logger.Println("Halt button pressed.")
+	//logger.Println("Halt button pressed.")
 	dashboard.SetStatus("Halt program.")
 	dashboard.UpdateAll()
 	cpu.SetRunning(false)
@@ -127,14 +125,14 @@ func halt() {
 }
 
 func reset() {
-	logger.Println("Reset button pressed.")
+	//logger.Println("Reset button pressed.")
 	cpu.Reset()
 	dashboard.SetStatus("CPU and memory reset.")
 	dashboard.UpdateAll()
 }
 
 func pause() {
-	logger.Println("Pause button pressed.")
+	//logger.Println("Pause button pressed.")
 	cpu.SetHalt(true)
 	cpu.SetRunning(false)
 	dashboard.SetStatus("CPU paused. Press Run or Step to continue current program.")
@@ -162,6 +160,6 @@ func monitorCPUStatus() {
 func g_monitorCPUStatus() {
 	// Respond when channel message is received from CPU
 	s := <-cpu.CPUStatus
-	logger.Println("From channel monitor: " + s)
+	//logger.Println("From channel monitor: " + s)
 	dashboard.SetStatus("From channel monitor: " + s)
 }

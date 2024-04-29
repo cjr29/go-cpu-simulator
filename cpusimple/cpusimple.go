@@ -141,7 +141,7 @@ func (c *CPU) RunFromPC(codeLength int) {
 	for c.PC < codeLength {
 		if !c.RunningFlag {
 			c.CPUStatus <- "Program paused ..., press Step or Run to continue."
-			logger.Println("Program paused.")
+			//logger.Println("Program paused.")
 			return
 		}
 		c.FetchInstruction(c.Memory[0:])
@@ -151,10 +151,10 @@ func (c *CPU) RunFromPC(codeLength int) {
 	}
 	c.SetRunning(false)
 	/* 	log.Printf("Program finished. R0 = %d; PC = %d, SP = %d, S[0] = %d\n", c.Registers[0], c.PC, c.SP, c.Stack[0])
-	   	logger.Println("\nMemory:\n" + c.GetAllMemory())
+	   	//logger.Println("\nMemory:\n" + c.GetAllMemory())
 	   	log.Printf("\nStack:\n" + c.GetStack()) */
 	c.CPUStatus <- "Program execution complete."
-	logger.Println("Program execution complete.")
+	//logger.Println("Program execution complete.")
 }
 
 // Be sure there is a program in memory

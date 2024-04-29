@@ -68,11 +68,9 @@ func New(cpu *cpusimple.CPU, load func(), run func(), step func(), halt func(), 
 
 	pauseButton := widget.NewButton("Pause", pause)
 
-	//registerHeader := container.New(layout.NewHBoxLayout(), canvas.NewText("Registers", color.Black))
 	registerHeader := widget.NewLabel("Registers")
 	registerHeader.TextStyle.Monospace = true
 	registerHeader.TextStyle.Bold = true
-	//registerHeader2 := container.New(layout.NewHBoxLayout(), canvas.NewText(" ", color.Black))
 	registerHeader2 := widget.NewLabel("Content")
 	registerHeader2.TextStyle.Monospace = true
 	registerHeader2.TextStyle.Bold = true
@@ -164,22 +162,12 @@ func New(cpu *cpusimple.CPU, load func(), run func(), step func(), halt func(), 
 	memoryLabel = widget.NewLabel("Contents of Memory:\n")
 	memoryLabel.TextStyle.Monospace = true
 	memoryGridLabel = widget.NewLabel(memoryDisplay)
-	// var memoryWindow = container.NewVBox()
-	// var memoryScroller = container.NewVScroll(memoryWindow)
-	// memoryWindow.Add(&canvas.Text{
-	// 	Text:      memoryDisplay,
-	// 	Color:     color.Black,
-	// 	TextSize:  12,
-	// 	TextStyle: fyne.TextStyle{Monospace: true},
-	// })
 	memoryContainer := container.New(
 		layout.NewVBoxLayout(),
 		memoryLabel,
 		memoryGridLabel,
 		//memoryScroller,
 	)
-
-	//memoryContainer := newMemoryContainer(&memoryDisplay)
 
 	// Speed entry
 	speedContainer := container.New(
@@ -193,7 +181,7 @@ func New(cpu *cpusimple.CPU, load func(), run func(), step func(), halt func(), 
 				if s, err := strconv.ParseInt(inputCPUClock.Text, 0, 32); err == nil {
 					cpu.Clock = s
 				}
-				logger.Println("Clock speed input value:", cpu.Clock, " seconds")
+				//logger.Println("Clock speed input value:", cpu.Clock, " seconds")
 				stringValue := strconv.FormatInt(cpu.Clock, 10)
 				SetStatus("Clock set to " + stringValue + " seconds")
 			})),
