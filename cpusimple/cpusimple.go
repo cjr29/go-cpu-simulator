@@ -241,15 +241,21 @@ func (c *CPU) GetMemory(index int) string {
 	return line
 }
 
-// GetAllMemory returns a 16 byte formatted string starting at provided index
+// GetAllMemory returns a 16 byte formatted string starting at 0000
 func (c *CPU) GetAllMemory() string {
 	var line string
 	blocks := len(c.Memory) / 16
 	remainder := len(c.Memory) % 16
 	//logger.Println("Blocks = ", blocks)
 	//logger.Println("Remainder = ", remainder)
+	// Send header line with memory locations
+	line = "            00 01 02 03 04 05 06 07 08 09 0a 0b 0c 0d 0e 0f\n"
+	//rowHead := 0
 	k := 0
 	for j := 0; j < blocks; j++ {
+		//rowHead = k & 0xff00
+		line = line + fmt.Sprintf("%04x:  ", k)
+		//		line = line + fmt.Sprintf("%04d:  ", rowHead)
 		for i := k; i < k+16; i++ {
 			line = line + fmt.Sprintf("%02x ", c.Memory[i])
 		}

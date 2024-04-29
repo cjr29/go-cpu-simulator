@@ -37,6 +37,9 @@ var (
 	inputCPUClock    *widget.Entry
 )
 
+var getfiles struct {
+}
+
 var Console = container.NewVBox()
 var ConsoleScroller = container.NewVScroll(Console)
 
@@ -66,11 +69,11 @@ func New(cpu *cpusimple.CPU, load func(), run func(), step func(), halt func(), 
 	pauseButton := widget.NewButton("Pause", pause)
 
 	//registerHeader := container.New(layout.NewHBoxLayout(), canvas.NewText("Registers", color.Black))
-	registerHeader := widget.NewLabel("Registers\nContent")
+	registerHeader := widget.NewLabel("Registers")
 	registerHeader.TextStyle.Monospace = true
 	registerHeader.TextStyle.Bold = true
 	//registerHeader2 := container.New(layout.NewHBoxLayout(), canvas.NewText(" ", color.Black))
-	registerHeader2 := widget.NewLabel(" ")
+	registerHeader2 := widget.NewLabel("Content")
 	registerHeader2.TextStyle.Monospace = true
 	registerHeader2.TextStyle.Bold = true
 
