@@ -1,4 +1,4 @@
-package cpu
+package cpusimple
 
 import (
 	"bytes"
@@ -15,7 +15,11 @@ func TestSum1To10(t *testing.T) {
 		0x80, 0xa1, 0x24, 0x81, 0xa0, 0x01, 0x24, 0x81, 0xa4, 0x42,
 		0xc1, 0x80, 0xa1,
 	}
+
 	cpu := CPU{}
+	cpu.SetMemSize(10)
+	cpu.SetStackSize(100)
+	cpu.SetClock(0)
 	res := cpu.Run(code, len(code))
 	if res != 55 {
 		t.Fatalf("Want: %d Got: %d", 55, res)
@@ -35,6 +39,9 @@ func TestAlternativeSum1To10(t *testing.T) {
 		0x80, 0xa1,
 	}
 	cpu := CPU{}
+	cpu.SetMemSize(10)
+	cpu.SetStackSize(10)
+	cpu.SetClock(0)
 	res := cpu.Run(code, len(code))
 	if res != 55 {
 		t.Fatalf("Want: %d Got: %d", 55, res)
@@ -83,6 +90,9 @@ func TestMachineCodeGeneration(t *testing.T) {
 		t.Fatalf("Want: %#v Got %#v", code, generatedCode)
 	}
 	cpu := CPU{}
+	cpu.SetMemSize(10)
+	cpu.SetStackSize(10)
+	cpu.SetClock(0)
 	res := cpu.Run(generatedCode, len(generatedCode))
 	if res != 55 {
 		t.Fatalf("Want: %d Got: %d", 55, res)
@@ -121,6 +131,9 @@ func TestSum1To100(t *testing.T) {
 	}
 	generatedCode := AsmCodeToBytes(asmCode)
 	cpu := CPU{}
+	cpu.SetMemSize(10)
+	cpu.SetStackSize(10)
+	cpu.SetClock(0)
 	res := cpu.Run(generatedCode, len(generatedCode))
 	if res != 5050 {
 		t.Fatalf("Want: %d Got: %d", 5050, res)
@@ -285,6 +298,9 @@ func TestSequence1To15(t *testing.T) {
 	}
 	code := AsmCodeToBytes(asmCode)
 	cpu := CPU{}
+	cpu.SetMemSize(10)
+	cpu.SetStackSize(10)
+	cpu.SetClock(0)
 	res := cpu.Run(code, len(code))
 	if res != 75 {
 		t.Fatalf("Want: %d Got: %d", 75, res)
@@ -538,6 +554,9 @@ func TestSequence1To10000(t *testing.T) {
 	}
 	code := AsmCodeToBytes(asmCode)
 	cpu := CPU{}
+	cpu.SetMemSize(10)
+	cpu.SetStackSize(10)
+	cpu.SetClock(0)
 	res := cpu.Run(code, len(code))
 	if res != 36678337 {
 		t.Fatalf("Want: %d Got: %d", 36678337, res)

@@ -1,10 +1,9 @@
-module chrisriddick.net/simplesimulator
+module chrisriddick.net/dashboard
 
 go 1.21.6
 
 require (
 	chrisriddick.net/cpusimple v0.0.0
-	chrisriddick.net/dashboard v0.0.0
 	fyne.io/fyne/v2 v2.4.5
 )
 
@@ -38,6 +37,4 @@ require (
 	honnef.co/go/js/dom v0.0.0-20231112215516-51f43a291193 // indirect
 )
 
-replace chrisriddick.net/cpusimple v0.0.0 => ./cpusimple
-
-replace chrisriddick.net/dashboard v0.0.0 => ./dashboard
+replace chrisriddick.net/cpusimple v0.0.0 => ../cpusimple
