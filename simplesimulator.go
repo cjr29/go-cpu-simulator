@@ -102,7 +102,7 @@ func step() {
 		cpu.SetRunning(true)
 		cpu.FetchInstruction(cpu.Memory)
 		//log.Printf("PC = x%04x, SP = %d", cpu.PC, cpu.SP)
-		dashboard.SetStatus(fmt.Sprintf("Step: PC = %d, SP = %d, S[0] = %d\n", cpu.PC, cpu.SP, cpu.Stack[0]))
+		dashboard.SetStatus(fmt.Sprintf("Step: PC = %d, SP = %d, S[0] = %d", cpu.PC, cpu.SP, cpu.Stack[0]))
 		dashboard.UpdateAll()
 		cpu.SetRunning(false)
 		// //logger.Println("Sleep ", cpu.Clock, " seconds")

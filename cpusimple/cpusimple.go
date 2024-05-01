@@ -249,7 +249,7 @@ func (c *CPU) GetAllMemory() string {
 	//logger.Println("Blocks = ", blocks)
 	//logger.Println("Remainder = ", remainder)
 	// Send header line with memory locations
-	line = "            00 01 02 03 04 05 06 07 08 09 0a 0b 0c 0d 0e 0f\n"
+	line = "       00 01 02 03 04 05 06 07 08 09 0a 0b 0c 0d 0e 0f\n"
 	//rowHead := 0
 	k := 0
 	for j := 0; j < blocks; j++ {
