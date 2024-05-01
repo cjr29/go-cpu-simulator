@@ -22,23 +22,35 @@ var (
 	CPUStatus                                             string
 	br0, br1, br2, br3, br4, br5, br6, br7, br8           binding.ExternalInt
 	br9, br10, br11, br12, br13, br14, br15, br16         binding.ExternalInt
+	sp, pc                                                binding.ExternalInt
 	br0s, br1s, br2s, br3s, br4s, br5s, br6s, br7s, br8s  *widget.Label
 	br9s, br10s, br11s, br12s, br13s, br14s, br15s, br16s *widget.Label
 	w                                                     fyne.Window
 	status                                                string
 
-	statusScroll *widget.TextGrid
-
-	stackDisplay     string
-	stackLabelWidget *widget.Label
-	memoryDisplay    string
-	memoryGridLabel  *widget.Label
-	memoryLabel      *widget.Label
-	inputCPUClock    *widget.Entry
+	stackDisplay          string
+	stackLabelWidget      *widget.Label
+	stackHeader           *widget.Label
+	memoryDisplay         string
+	memoryGridLabel       *widget.Label
+	memoryLabel           *widget.Label
+	inputCPUClock         *widget.Entry
+	loadButton            *widget.Button
+	runButton             *widget.Button
+	haltButton            *widget.Button
+	stepButton            *widget.Button
+	resetButton           *widget.Button
+	pauseButton           *widget.Button
+	buttonsContainer      *fyne.Container
+	settingsContainer     *fyne.Container
+	statusContainer       *fyne.Container
+	registerContainer     *fyne.Container
+	memoryContainer       *fyne.Container
+	stackContainer        *fyne.Container
+	cpuInternalsContainer *fyne.Container
+	speedContainer        *fyne.Container
+	centerContainer       *fyne.Container
 )
-
-var getfiles struct {
-}
 
 var Console = container.NewVBox()
 var ConsoleScroller = container.NewVScroll(Console)
@@ -56,17 +68,12 @@ func New(cpu *cpusimple.CPU, load func(), run func(), step func(), halt func(), 
 
 	status = "CPU status is displayed here."
 
-	loadButton := widget.NewButton("Load", load)
-
-	runButton := widget.NewButton("Run", run)
-
-	haltButton := widget.NewButton("Halt", halt)
-
-	stepButton := widget.NewButton("Step", step)
-
-	resetButton := widget.NewButton("Reset", reset)
-
-	pauseButton := widget.NewButton("Pause", pause)
+	loadButton = widget.NewButton("Load", load)
+	runButton = widget.NewButton("Run", run)
+	haltButton = widget.NewButton("Halt", halt)
+	stepButton = widget.NewButton("Step", step)
+	resetButton = widget.NewButton("Reset", reset)
+	pauseButton = widget.NewButton("Pause", pause)
 
 	registerHeader := widget.NewLabel("Registers")
 	registerHeader.TextStyle.Monospace = true
@@ -150,29 +157,36 @@ func New(cpu *cpusimple.CPU, load func(), run func(), step func(), halt func(), 
 	registerContainerCol2 := container.New(layout.NewVBoxLayout(), registerHeader2, r9, r10, r11, r12, r13, r14, r15, r16)
 
 	// Stack
-	stackHeader := widget.NewLabel("Stack\nContent")
+	stackHeader = widget.NewLabel("Stack\nContent")
 	stackHeader.TextStyle.Monospace = true
-	stackHeader.TextStyle.Monospace = true
+	stackHeader.TextStyle.Bold = true
 	stackDisplay = cpu.GetStack()
 	stackLabelWidget = widget.NewLabel(stackDisplay)
-	stackContainer := container.New(layout.NewVBoxLayout(), stackHeader, stackLabelWidget)
+	stackLabelWidget.TextStyle.Monospace = true
+	stackLabelWidget.TextStyle.Bold = true
+	stackContainer = container.New(
+		layout.NewVBoxLayout(),
+		stackHeader,
+		stackLabelWidget,
+	)
 
 	// Memory
 	memoryDisplay = cpu.GetAllMemory()
 	memoryLabel = widget.NewLabel("Contents of Memory:\n")
 	memoryLabel.TextStyle.Monospace = true
+	memoryLabel.TextStyle.Bold = true
 	memoryGridLabel = widget.NewLabel(memoryDisplay)
-	memoryContainer := container.New(
+	memoryGridLabel.TextStyle.Monospace = true
+	memoryContainer = container.New(
 		layout.NewVBoxLayout(),
 		memoryLabel,
 		memoryGridLabel,
-		//memoryScroller,
 	)
 
 	// Speed entry
-	speedContainer := container.New(
+	/* speedContainer = container.New(
 		layout.NewHBoxLayout(),
-		layout.NewSpacer(),
+		//layout.NewSpacer(),
 		container.NewHBox(
 			canvas.NewText("Clock = ", color.Black),
 			inputCPUClock,
@@ -187,23 +201,53 @@ func New(cpu *cpusimple.CPU, load func(), run func(), step func(), halt func(), 
 			})),
 		canvas.NewText("Set clock speed in seconds. Zero sets clock to full speed.  ", color.Black),
 		layout.NewSpacer(),
+	) */
+
+	speedContainer = container.New(
+		layout.NewHBoxLayout(),
+		//layout.NewSpacer(),
+		canvas.NewText("Clock = ", color.Black),
+		inputCPUClock,
+		canvas.NewText("sec  ", color.Black),
+		widget.NewButton("Save", func() {
+			if s, err := strconv.ParseInt(inputCPUClock.Text, 0, 32); err == nil {
+				cpu.Clock = s
+			}
+			stringValue := strconv.FormatInt(cpu.Clock, 10)
+			SetStatus("Clock set to " + stringValue + " seconds")
+		}),
+		canvas.NewText("Set clock speed in seconds. Zero sets clock to full speed.  ", color.Black),
+		layout.NewSpacer(),
 	)
 
-	buttonsContainer := container.New(layout.NewHBoxLayout(), loadButton, runButton, haltButton, stepButton, resetButton, pauseButton)
+	// CPU Internals: PC, SP
+	pc = binding.BindInt(&cpu.PC)
+	sp = binding.BindInt(&cpu.SP)
+	cpuInternalsContainer = container.New(
+		layout.NewHBoxLayout(),
+		//layout.NewSpacer(),
+		container.NewHBox(
+			widget.NewLabelWithData(binding.IntToStringWithFormat(pc, "PC: x%04x")),
+			//layout.NewSpacer(),
+			widget.NewLabelWithData(binding.IntToStringWithFormat(sp, "SP: x%04x")),
+		),
+		//layout.NewSpacer(),
+	)
 
-	settingsContainer := container.New(layout.NewVBoxLayout(), buttonsContainer, speedContainer)
+	buttonsContainer = container.New(layout.NewHBoxLayout(), loadButton, runButton, haltButton, stepButton, resetButton, pauseButton)
+	settingsContainer = container.New(layout.NewVBoxLayout(), buttonsContainer, speedContainer, cpuInternalsContainer)
+	statusContainer = container.NewVBox(ConsoleScroller)
+	registerContainer = container.NewHBox(registerContainerCol1, registerContainerCol2)
+	centerContainer = container.NewHBox(memoryContainer, stackContainer)
 
-	statusContainer := container.NewVBox(ConsoleScroller)
-
-	registerContainer := container.NewHBox(registerContainerCol1, registerContainerCol2)
-
-	w.SetContent(container.NewBorder(settingsContainer, statusContainer, registerContainer, stackContainer, memoryContainer))
+	w.SetContent(container.NewBorder(settingsContainer, statusContainer, registerContainer, nil, centerContainer))
 
 	return w
 }
 
 func UpdateAll() {
-	// logger.Println("UpdateAll():\n" + memoryDisplay)
+
+	// Reload
 	br0.Reload()
 	br1.Reload()
 	br2.Reload()
@@ -221,11 +265,21 @@ func UpdateAll() {
 	br14.Reload()
 	br15.Reload()
 	br16.Reload()
+	pc.Reload()
+	sp.Reload()
 	stackDisplay = c.GetStack()
 	stackLabelWidget.Text = stackDisplay
 	memoryDisplay = c.GetAllMemory()
 	memoryGridLabel.SetText(memoryDisplay)
+
+	// Refresh
 	stackLabelWidget.Refresh()
+	memoryGridLabel.Refresh()
+	memoryContainer.Refresh()
+	stackContainer.Refresh()
+	settingsContainer.Refresh()
+	buttonsContainer.Refresh()
+	cpuInternalsContainer.Refresh()
 }
 
 func SetStatus(s string) {
