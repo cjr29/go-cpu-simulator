@@ -177,6 +177,18 @@ func (c *CPU) RunFromPC(codeLength int) {
 	c.CPUStatus <- "End of memory fault. Execution halted."
 }
 
+// DO NOT DELETE! Used by go tests
+// Run resets the CPU, carries out a sequence of instruction and finally returns
+// the contents of R0
+func (c *CPU) Run(code []byte, codeLength int) int {
+	c.Reset()
+	c.Preprocess(code, codeLength)
+	for c.PC < codeLength {
+		c.FetchInstruction(code)
+	}
+	return c.Registers[0]
+}
+
 // Be sure there is a program in memory
 func (c *CPU) VerifyProgramInMemory() bool {
 	// Be sure that a program has been loaded by testing  the first two bytes
