@@ -21,12 +21,12 @@ const (
 	MaskLabel = 0xe0
 
 	// Extended instrcution set
-	MaskExtended = 0x10
-	Halt         = 0x10
-	NoOp         = 0x11
-	Store        = 0x12
-	Load         = 0x13
-	Swap         = 0x14
+	MaskExtended = 0xf0
+	HALT         = 0x00
+	NOOP         = 0x01
+	STORE        = 0x02
+	LOAD         = 0x03
+	SWAP         = 0x04
 )
 
 var logger *log.Logger
@@ -110,13 +110,14 @@ func (c *CPU) FetchInstruction(code []byte) {
 
 func (c *CPU) ProcessExtendedOpCode(instruction byte) {
 	logger.Println("ProcessExtendedOpCode")
-	switch instruction {
-	case Halt:
+	op := instruction & 0x0f
+	switch op {
+	case HALT:
 		logger.Println("HALT instruction")
 		c.RunningFlag = false
 		c.HaltFlag = true
 		return
-	case NoOp:
+	case NOOP:
 		logger.Println("NOOP instruction")
 		return
 	default:
@@ -207,6 +208,7 @@ func (c *CPU) Load(program []byte, programLength int) {
 
 // Translate a symbolic instruction mnemonic into a byte
 func asmToByte(s string) byte {
+	//logger.Println("Asm: " + s)
 	parts := strings.Split(s, "_")
 	var b byte
 	switch parts[0] {
@@ -255,6 +257,7 @@ func asmToByte(s string) byte {
 
 // AsmCodeToBytes translates a full program from symbolic to machine form
 func AsmCodeToBytes(code []string) []byte {
+
 	bytes := make([]byte, len(code))
 	for i, asm := range code {
 		bytes[i] = asmToByte(asm)
