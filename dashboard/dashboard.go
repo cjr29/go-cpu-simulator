@@ -41,6 +41,7 @@ var (
 	stepButton            *widget.Button
 	resetButton           *widget.Button
 	pauseButton           *widget.Button
+	exitButton            *widget.Button
 	buttonsContainer      *fyne.Container
 	settingsContainer     *fyne.Container
 	statusContainer       *fyne.Container
@@ -55,7 +56,7 @@ var (
 var Console = container.NewVBox()
 var ConsoleScroller = container.NewVScroll(Console)
 
-func New(cpu *cpusimple.CPU, load func(), run func(), step func(), halt func(), reset func(), pause func()) fyne.Window {
+func New(cpu *cpusimple.CPU, reset func(), load func(), step func(), run func(), pause func(), halt func(), exit func()) fyne.Window {
 
 	logger = log.New(os.Stdout, "INFO: ", log.Ldate|log.Ltime)
 	c = cpu
@@ -74,6 +75,7 @@ func New(cpu *cpusimple.CPU, load func(), run func(), step func(), halt func(), 
 	stepButton = widget.NewButton("Step", step)
 	resetButton = widget.NewButton("Reset", reset)
 	pauseButton = widget.NewButton("Pause", pause)
+	exitButton = widget.NewButton("Exit", exit)
 
 	registerHeader := widget.NewLabel("Registers")
 	registerHeader.TextStyle.Monospace = true
@@ -234,7 +236,7 @@ func New(cpu *cpusimple.CPU, load func(), run func(), step func(), halt func(), 
 		//layout.NewSpacer(),
 	)
 
-	buttonsContainer = container.New(layout.NewHBoxLayout(), loadButton, runButton, haltButton, stepButton, resetButton, pauseButton)
+	buttonsContainer = container.New(layout.NewHBoxLayout(), resetButton, loadButton, runButton, stepButton, pauseButton, haltButton, exitButton)
 	settingsContainer = container.New(layout.NewVBoxLayout(), buttonsContainer, speedContainer, cpuInternalsContainer)
 	statusContainer = container.NewVBox(ConsoleScroller)
 	registerContainer = container.NewHBox(registerContainerCol1, registerContainerCol2)

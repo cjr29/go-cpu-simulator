@@ -19,6 +19,14 @@ const (
 	MaskPop   = 0xa0
 	MaskGoto  = 0xc0
 	MaskLabel = 0xe0
+
+	// Extended instrcution set
+	MaskExtended = 0x10
+	Halt         = 0x10
+	NoOp         = 0x11
+	Store        = 0x12
+	Load         = 0x13
+	Swap         = 0x14
 )
 
 var logger *log.Logger = log.New(os.Stdout, "INFO: ", log.Ldate|log.Ltime)
@@ -42,6 +50,14 @@ type CPU struct {
 func (c *CPU) FetchInstruction(code []byte) {
 	instruction := code[c.PC]
 	c.PC++
+	opt := instruction & MaskExtended
+	if opt == 0x10 {
+		// Handle extended instruction
+		logger.Println("Extended instruction set op code. Handle it.")
+		c.ProcessExtendedOpCode(instruction)
+		return
+	}
+	// Not using Extended Instruction Set, Proceed with original instruction set
 	op := instruction & 0xe0
 	switch op {
 	case MaskSet: // SET
@@ -89,6 +105,23 @@ func (c *CPU) FetchInstruction(code []byte) {
 		}
 	case MaskLabel: // LABEL
 		break
+	}
+}
+
+func (c *CPU) ProcessExtendedOpCode(instruction byte) {
+	logger.Println("ProcessExtendedOpCode")
+	switch instruction {
+	case Halt:
+		logger.Println("HALT instruction")
+		c.RunningFlag = false
+		c.HaltFlag = true
+		return
+	case NoOp:
+		logger.Println("NOOP instruction")
+		return
+	default:
+		logger.Println("Undefined extended instruction")
+		return
 	}
 }
 
@@ -140,8 +173,8 @@ func (c *CPU) RunFromPC(codeLength int) {
 	// Be sure that a program has been loaded
 	for c.PC < codeLength {
 		if !c.RunningFlag {
-			c.CPUStatus <- "Program paused ..., press Step or Run to continue."
-			//logger.Println("Program paused.")
+			c.CPUStatus <- "RunFromPC: CPU exiting run loop."
+			logger.Println("RunFromPC: CPU exiting run loop.")
 			return
 		}
 		c.FetchInstruction(c.Memory[0:])
@@ -150,11 +183,9 @@ func (c *CPU) RunFromPC(codeLength int) {
 		// log.Printf("RunFromPC: R0 = %d; PC = %d, SP = %d, S[0] = %d\n", c.Registers[0], c.PC, c.SP, c.Stack[0])
 	}
 	c.SetRunning(false)
-	/* 	log.Printf("Program finished. R0 = %d; PC = %d, SP = %d, S[0] = %d\n", c.Registers[0], c.PC, c.SP, c.Stack[0])
-	   	//logger.Println("\nMemory:\n" + c.GetAllMemory())
-	   	log.Printf("\nStack:\n" + c.GetStack()) */
-	c.CPUStatus <- "Program execution complete."
-	//logger.Println("Program execution complete.")
+	// log.Printf("Program finished. R0 = %d; PC = %d, SP = %d, S[0] = %d\n", c.Registers[0], c.PC, c.SP, c.Stack[0])
+	c.CPUStatus <- "RunFromPC: Program execution complete."
+	logger.Println("RunFromPC: Program execution complete.")
 }
 
 // Be sure there is a program in memory
@@ -321,11 +352,6 @@ func (c *CPU) SetRunning(flag bool) {
 // Get Running Flag
 func (c *CPU) GetRunning() bool {
 	return c.RunningFlag
-}
-
-// Initialize CPUStatus channel
-func (c *CPU) InitChan() {
-	c.CPUStatus = make(chan string) // Set up un-buffered channel for CPU status
 }
 
 func NewCPU() *CPU {
