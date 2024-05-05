@@ -3,7 +3,6 @@ package dashboard
 import (
 	"image/color"
 	"log"
-	"os"
 	"strconv"
 
 	"chrisriddick.net/cpusimple"
@@ -58,7 +57,6 @@ var ConsoleScroller = container.NewVScroll(Console)
 
 func New(cpu *cpusimple.CPU, reset func(), load func(), step func(), run func(), pause func(), halt func(), exit func()) fyne.Window {
 
-	logger = log.New(os.Stdout, "INFO: ", log.Ldate|log.Ltime)
 	c = cpu
 	a := app.NewWithID("simpleCPU")
 	w = a.NewWindow("Simple CPU Simulator")
@@ -184,26 +182,6 @@ func New(cpu *cpusimple.CPU, reset func(), load func(), step func(), run func(),
 		memoryLabel,
 		memoryGridLabel,
 	)
-
-	// Speed entry
-	/* speedContainer = container.New(
-		layout.NewHBoxLayout(),
-		//layout.NewSpacer(),
-		container.NewHBox(
-			canvas.NewText("Clock = ", color.Black),
-			inputCPUClock,
-			canvas.NewText("sec  ", color.Black),
-			widget.NewButton("Save", func() {
-				if s, err := strconv.ParseInt(inputCPUClock.Text, 0, 32); err == nil {
-					cpu.Clock = s
-				}
-				//logger.Println("Clock speed input value:", cpu.Clock, " seconds")
-				stringValue := strconv.FormatInt(cpu.Clock, 10)
-				SetStatus("Clock set to " + stringValue + " seconds")
-			})),
-		canvas.NewText("Set clock speed in seconds. Zero sets clock to full speed.  ", color.Black),
-		layout.NewSpacer(),
-	) */
 
 	speedContainer = container.New(
 		layout.NewHBoxLayout(),

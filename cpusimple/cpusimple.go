@@ -29,7 +29,7 @@ const (
 	Swap         = 0x14
 )
 
-var logger *log.Logger = log.New(os.Stdout, "INFO: ", log.Ldate|log.Ltime)
+var logger *log.Logger
 
 // CPU is the central structure representing the processor with its resources
 type CPU struct {
@@ -157,24 +157,12 @@ func (c *CPU) Reset() {
 }
 
 // Run resets the CPU, carries out a sequence of instruction and finally returns
-// the contents of R0
-func (c *CPU) Run(code []byte, codeLength int) int {
-	c.Reset()
-	c.Preprocess(code, codeLength)
-	for c.PC < codeLength {
-		c.FetchInstruction(code)
-	}
-	return c.Registers[0]
-}
-
-// Run resets the CPU, carries out a sequence of instruction and finally returns
 // with a string indicating status
 func (c *CPU) RunFromPC(codeLength int) {
-	// Be sure that a program has been loaded
-	for c.PC < codeLength {
+	for c.PC < len(c.Memory) {
 		if !c.RunningFlag {
-			c.CPUStatus <- "RunFromPC: CPU exiting run loop."
-			logger.Println("RunFromPC: CPU exiting run loop.")
+			logger.Println("CPU exiting run loop.")
+			c.CPUStatus <- "CPU exiting run loop."
 			return
 		}
 		c.FetchInstruction(c.Memory[0:])
@@ -183,9 +171,10 @@ func (c *CPU) RunFromPC(codeLength int) {
 		// log.Printf("RunFromPC: R0 = %d; PC = %d, SP = %d, S[0] = %d\n", c.Registers[0], c.PC, c.SP, c.Stack[0])
 	}
 	c.SetRunning(false)
+	c.SetHalt(true)
 	// log.Printf("Program finished. R0 = %d; PC = %d, SP = %d, S[0] = %d\n", c.Registers[0], c.PC, c.SP, c.Stack[0])
-	c.CPUStatus <- "RunFromPC: Program execution complete."
-	logger.Println("RunFromPC: Program execution complete.")
+	logger.Println("End of memory fault. Execution halted.")
+	c.CPUStatus <- "End of memory fault. Execution halted."
 }
 
 // Be sure there is a program in memory
@@ -202,7 +191,6 @@ func (c *CPU) Load(program []byte, programLength int) {
 	for i := 0; i < programLength; i++ {
 		c.Memory[i] = program[i]
 	}
-	// logger.Println("Load: " + fmt.Sprintf("%02x ", c.Memory[99]))
 }
 
 // Translate a symbolic instruction mnemonic into a byte
@@ -277,8 +265,6 @@ func (c *CPU) GetAllMemory() string {
 	var line string
 	blocks := len(c.Memory) / 16
 	remainder := len(c.Memory) % 16
-	//logger.Println("Blocks = ", blocks)
-	//logger.Println("Remainder = ", remainder)
 	// Send header line with memory locations
 	line = "       00 01 02 03 04 05 06 07 08 09 0a 0b 0c 0d 0e 0f\n"
 	//rowHead := 0
@@ -355,6 +341,6 @@ func (c *CPU) GetRunning() bool {
 }
 
 func NewCPU() *CPU {
-	logger = log.New(os.Stdout, "INFO: ", log.Ldate|log.Ltime)
+	logger = log.New(os.Stdout, "INFO: ", log.Ldate|log.Ltime|log.Lshortfile)
 	return &CPU{}
 }

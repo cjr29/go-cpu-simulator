@@ -30,7 +30,7 @@ var (
 	program = []byte{
 		0x00, 0x81, 0xa0, 0x0b, 0x81, 0xa2, 0x01, 0x81, 0xa4, 0xe0,
 		0x80, 0xa1, 0x24, 0x81, 0xa0, 0x01, 0x24, 0x81, 0xa4, 0x42,
-		0xc1, 0x80, 0xa1, 0x11, 0x10,
+		0xc1, 0x80, 0xa1, //0x11, 0x10,
 	}
 	/* program = []byte{
 		0x00, 0x81, 0xa0, 0x0b, 0x81, 0xa2, 0x01, 0x81, 0xa4, 0xe0,
@@ -51,9 +51,8 @@ var (
 
 func main() {
 
-	logger = log.New(os.Stdout, "INFO: ", log.Ldate|log.Ltime)
+	logger = log.New(os.Stdout, "INFO: ", log.Ldate|log.Ltime|log.Lshortfile)
 
-	//cpu.InitChan() // Initialize CPU status channel for goroutines
 	cpu.CPUStatus = make(chan string)
 	cpu.SetMemSize(memSize)
 	cpu.SetStackSize(stackSize)
@@ -69,15 +68,12 @@ func main() {
 
 func load() {
 	// Loads code in []program into CPU memory at index 0
-	// logger.Println("Entered load().")
 	cpu.Reset()
 	cpu.Load(program, len(program))
 	cpu.Preprocess(program, len(program))
-	//logger.Println("Program loaded")
+	logger.Println("Program loaded")
 	dashboard.SetStatus("Program loaded.")
 	dashboard.UpdateAll()
-	//go g_monitorHalt() // Start CPU monitor in background
-	//go g_monitorCPUStatus()
 	go g_Load(loadChan)
 }
 
@@ -85,22 +81,19 @@ func run() {
 	result := cpu.VerifyProgramInMemory()
 	if !result {
 		dashboard.SetStatus("ERROR: No program loaded.")
+		logger.Println("ERROR: No program loaded.")
 		cpu.CPUStatus <- "No program is loaded."
-		//logger.Println("ERROR: No program loaded.")
 		return
 	}
 	if !cpu.GetRunning() {
 		// CPU isn't running, so retstart monitoring and set running flag
 		go monitorCPUStatus()
-		//go g_monitorHalt()
 		go g_monitorCPUStatus()
 		cpu.SetRunning(true)
 	}
-	//logger.Println("Running loaded program, standby...")
+	logger.Println("Running loaded program, ...")
 	dashboard.SetStatus("Running loaded program ...")
 	go g_Run(runChan)
-	//go monitorCPUStatus()
-	//go g_monitorCPUStatus()
 	go cpu.RunFromPC(len(program))
 }
 
@@ -112,14 +105,6 @@ func step() {
 		//logger.Println("ERROR: No program loaded.")
 		return
 	}
-	//if cpu.GetHalt() {
-	// If CPU is stopped, restart monitoring and set running flag
-	//logger.Println("Starting goroutines for CPUStatus and Halt")
-	//go monitorCPUStatus()
-	//go g_monitorCPUStatus()
-	//go g_monitorHalt()
-	//cpu.SetRunning(true)
-	//}
 	if cpu.PC < len(program) {
 		cpu.SetRunning(true)
 		go g_Step(stepChan)
@@ -244,10 +229,3 @@ func g_Halt(c chan string) {
 	dashboard.SetStatus("From channel monitor: Program halted.")
 	c <- "From channel monitor: Program halted."
 }
-
-/* func g_monitorHalt() {
-	// Respond when channel message is received from CPU
-	s := <-cpu.CPUHalt
-	logger.Println("From channel monitor: " + s)
-	dashboard.SetStatus("From channel monitor: " + s)
-} */
