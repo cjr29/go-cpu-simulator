@@ -25,7 +25,7 @@ func TestSum1To10(t *testing.T) {
 	cpu.SetMemSize(10)
 	cpu.SetStackSize(100)
 	cpu.SetClock(0)
-	res := cpu.Run(code, len(code))
+	res := cpu.Run(code, uint16(len(code)))
 	if res != 55 {
 		t.Fatalf("Want: %d Got: %d", 55, res)
 	}
@@ -47,7 +47,7 @@ func TestAlternativeSum1To10(t *testing.T) {
 	cpu.SetMemSize(10)
 	cpu.SetStackSize(10)
 	cpu.SetClock(0)
-	res := cpu.Run(code, len(code))
+	res := cpu.Run(code, uint16(len(code)))
 	if res != 55 {
 		t.Fatalf("Want: %d Got: %d", 55, res)
 	}
@@ -98,7 +98,7 @@ func TestMachineCodeGeneration(t *testing.T) {
 	cpu.SetMemSize(10)
 	cpu.SetStackSize(10)
 	cpu.SetClock(0)
-	res := cpu.Run(generatedCode, len(generatedCode))
+	res := cpu.Run(generatedCode, uint16(len(generatedCode)))
 	if res != 55 {
 		t.Fatalf("Want: %d Got: %d", 55, res)
 	}
@@ -139,7 +139,7 @@ func TestSum1To100(t *testing.T) {
 	cpu.SetMemSize(10)
 	cpu.SetStackSize(10)
 	cpu.SetClock(0)
-	res := cpu.Run(generatedCode, len(generatedCode))
+	res := cpu.Run(generatedCode, uint16(len(generatedCode)))
 	if res != 5050 {
 		t.Fatalf("Want: %d Got: %d", 5050, res)
 	}
@@ -306,7 +306,7 @@ func TestSequence1To15(t *testing.T) {
 	cpu.SetMemSize(10)
 	cpu.SetStackSize(10)
 	cpu.SetClock(0)
-	res := cpu.Run(code, len(code))
+	res := cpu.Run(code, uint16(len(code)))
 	if res != 75 {
 		t.Fatalf("Want: %d Got: %d", 75, res)
 	}

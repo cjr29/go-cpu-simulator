@@ -36,13 +36,13 @@ var logger *log.Logger
 
 // CPU is the central structure representing the processor with its resources
 type CPU struct {
-	Registers   [17]int
-	Labels      [16]int
-	PC          int  // Program counter
-	SP          int  // Stack pointer
-	Flag        bool // Processor flag
+	Registers   [17]uint16
+	Labels      [16]uint16
+	PC          uint16 // Program counter
+	SP          uint16 // Stack pointer
+	Flag        bool   // Processor flag
 	Memory      []byte
-	Stack       []int
+	Stack       []uint16
 	Clock       int64       // clock delay in seconds. If = 0, full speed
 	HaltFlag    bool        // Halt flag used to stop CPU
 	RunningFlag bool        // Indicates if CPU is executing a program
@@ -66,7 +66,7 @@ func (c *CPU) FetchInstruction(code []byte) {
 	switch op {
 	case MaskSet: // SET
 		val := instruction & 0x1f
-		c.Registers[0] = int(val)
+		c.Registers[0] = uint16(val)
 	case MaskAdd: // ADD
 		reg := (instruction&0x1e)>>1 + 1
 		c.Registers[0] += c.Registers[reg]
@@ -132,8 +132,8 @@ func (c *CPU) ProcessExtendedOpCode(instruction byte) {
 	case LOAD:
 		logger.Println("LOAD instruction")
 		// Loads the two bytes starting at PC into R0
-		hibyte := int(c.Memory[c.PC])
-		lobyte := int(c.Memory[c.PC+1])
+		hibyte := uint16(c.Memory[c.PC])
+		lobyte := uint16(c.Memory[c.PC+1])
 		c.Registers[0] = (hibyte << 8) + lobyte
 		c.PC = c.PC + 2
 	case SWAP:
@@ -172,8 +172,9 @@ func (c *CPU) ProcessExtendedOpCode(instruction byte) {
 
 // Preprocess takes care of parsing labels to allow forward references in the
 // code
-func (c *CPU) Preprocess(code []byte, codeLength int) {
-	for i := 0; i < codeLength; i++ {
+func (c *CPU) Preprocess(code []byte, codeLength uint16) {
+	var i uint16
+	for i = 0; i < codeLength; i++ {
 		if code[i]&0xe0 == 0xe0 {
 			label := (code[i] & 0x1e) >> 1
 			c.Labels[label] = i + 1
@@ -204,7 +205,7 @@ func (c *CPU) Reset() {
 // Run resets the CPU, carries out a sequence of instruction and finally returns
 // with a string indicating status
 func (c *CPU) RunFromPC(codeLength int) {
-	for c.PC < len(c.Memory) {
+	for c.PC < uint16(len(c.Memory)) {
 		if !c.RunningFlag {
 			logger.Println("CPU exiting run loop.")
 			c.CPUStatus <- "CPU exiting run loop."
@@ -225,7 +226,7 @@ func (c *CPU) RunFromPC(codeLength int) {
 // DO NOT DELETE! Used by go tests
 // Run resets the CPU, carries out a sequence of instruction and finally returns
 // the contents of R0
-func (c *CPU) Run(code []byte, codeLength int) int {
+func (c *CPU) Run(code []byte, codeLength uint16) uint16 {
 	c.Reset()
 	c.Preprocess(code, codeLength)
 	for c.PC < codeLength {
@@ -311,9 +312,10 @@ func AsmCodeToBytes(code []string) []byte {
 }
 
 // GetMemory returns a 16 byte formatted string starting at provided index
-func (c *CPU) GetMemory(index int) string {
+func (c *CPU) GetMemory(index uint16) string {
 	var line string
-	for i := index; i < index+16; i++ {
+	var i uint16
+	for i = index; i < index+16; i++ {
 		line = line + fmt.Sprintf("%02x ", c.Memory[i])
 	}
 	return line
@@ -357,18 +359,20 @@ func (c *CPU) GetStack() string {
 }
 
 // SetMemSize expands Memory slice to specified size and initializes to all zeros
-func (c *CPU) SetMemSize(size int) {
+func (c *CPU) SetMemSize(size uint16) {
 	tempSlice := make([]byte, size)
-	for i := 1; i < size; i++ {
+	var i uint16
+	for i = 1; i < size; i++ {
 		tempSlice[i] = 0
 	}
 	c.Memory = append(c.Memory, tempSlice...)
 }
 
 // SetStackSize expands Memory slice to specified size and initializes to all zeros
-func (c *CPU) SetStackSize(size int) {
-	tempStackSlice := make([]int, size)
-	for i := 1; i < size; i++ {
+func (c *CPU) SetStackSize(size uint16) {
+	tempStackSlice := make([]uint16, size)
+	var i uint16
+	for i = 1; i < size; i++ {
 		tempStackSlice[i] = 0
 	}
 	c.Stack = append(c.Stack, tempStackSlice...)

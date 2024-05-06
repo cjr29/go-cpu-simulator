@@ -70,7 +70,7 @@ func load() {
 	// Loads code in []program into CPU memory at index 0
 	cpu.Reset()
 	cpu.Load(program, len(program))
-	cpu.Preprocess(program, len(program))
+	cpu.Preprocess(program, uint16(len(program)))
 	logger.Println("Program loaded")
 	dashboard.SetStatus("Program loaded.")
 	dashboard.UpdateAll()
@@ -105,7 +105,7 @@ func step() {
 		//logger.Println("ERROR: No program loaded.")
 		return
 	}
-	if cpu.PC < len(program) {
+	if cpu.PC < uint16(len(program)) {
 		cpu.SetRunning(true)
 		go g_Step(stepChan)
 		cpu.FetchInstruction(cpu.Memory)
