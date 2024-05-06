@@ -22,11 +22,14 @@ const (
 
 	// Extended instrcution set
 	MaskExtended = 0xf0
-	HALT         = 0x00
-	NOOP         = 0x01
-	STORE        = 0x02
-	LOAD         = 0x03
-	SWAP         = 0x04
+	NOOP         = 0x00 // No operation, move to next PC
+	HALT         = 0x01 // Stop CPU execution at current PC
+	STORE        = 0x02 // Store contents of R0 at memory location addressed by next two bytes (big endian)
+	LOAD         = 0x03 // Load R0 with two bytes from memory location addressed by next two bytes
+	SWAP         = 0x04 // Exchange contents of R0 with R1
+	SUB          = 0x05 // Jump to subroutine at PC,PC++, pushing PC+2 onto stack
+	RET          = 0x06 // Return from subroutine, popping PC from stack
+	CMP          = 0x07 // Compare contents of R0 with contents of R1 and set CPU Flag to true if matched or false if not
 )
 
 var logger *log.Logger
@@ -35,8 +38,9 @@ var logger *log.Logger
 type CPU struct {
 	Registers   [17]int
 	Labels      [16]int
-	PC          int // Program counter
-	SP          int // Stack pointer
+	PC          int  // Program counter
+	SP          int  // Stack pointer
+	Flag        bool // Processor flag
 	Memory      []byte
 	Stack       []int
 	Clock       int64       // clock delay in seconds. If = 0, full speed
@@ -116,15 +120,55 @@ func (c *CPU) ProcessExtendedOpCode(instruction byte) {
 		logger.Println("HALT instruction")
 		c.RunningFlag = false
 		c.HaltFlag = true
-		return
 	case NOOP:
 		logger.Println("NOOP instruction")
-		return
+	case STORE:
+		// Stores the two bytes of R0 at the location specified by the next two bytes from the PC
+		// Use Big-Endian for storing.
+		c.Memory[c.PC] = byte(c.Registers[0] >> 8)
+		c.Memory[c.PC+1] = byte(c.Registers[0] & 0x00ff)
+		c.PC = c.PC + 2
+		logger.Println("STORE instruction")
+	case LOAD:
+		logger.Println("LOAD instruction")
+		// Loads the two bytes starting at PC into R0
+		hibyte := int(c.Memory[c.PC])
+		lobyte := int(c.Memory[c.PC+1])
+		c.Registers[0] = (hibyte << 8) + lobyte
+		c.PC = c.PC + 2
+	case SWAP:
+		logger.Println("SWAP instruction")
+		// Exchange the contents of R0 with R1 and vice versa
+		temp := c.Registers[0]
+		c.Registers[0] = c.Registers[1]
+		c.Registers[1] = temp
+	case SUB:
+		logger.Println("SUB instruction")
+		// Jump to subroutine at address pointed to by PC,PC++, pushing PC+2 onto stack
+
+	case RET:
+		logger.Println("RET instruction")
+		// Return from subroutine by popping the return address off the stack and setting PC to that value
+	case CMP:
+		logger.Println("CMP instruction")
+		// Compare contents of R0 with contents of R1 and set CPU Flag to true if matched or false if not
+		if c.Registers[0] == c.Registers[1] {
+			c.Flag = true
+		} else {
+			c.Flag = false
+		}
 	default:
 		logger.Println("Undefined extended instruction")
-		return
 	}
 }
+
+// Return int value (16-bit word) given pointer to two bytes. Assume Big-Endian
+/* func getWord(parts []byte) int {
+	hibyte := int(parts[0])
+	lobyte := int(parts[1])
+	word := (hibyte << 8) + lobyte
+	return word
+} */
 
 // Preprocess takes care of parsing labels to allow forward references in the
 // code
