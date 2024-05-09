@@ -3,7 +3,6 @@ package dashboard
 import (
 	"fmt"
 	"image/color"
-	"log"
 	"strconv"
 
 	"chrisriddick.net/cpusimple"
@@ -16,21 +15,17 @@ import (
 )
 
 var (
-	logger    *log.Logger
-	c         *cpusimple.CPU
-	CPUStatus string
-	// br0, br1, br2, br3, br4, br5, br6, br7, br8           binding.ExternalInt
-	// br9, br10, br11, br12, br13, br14, br15, br16         binding.ExternalInt
-	// sp, pc                                                binding.ExternalInt
-	br0s, br1s, br2s, br3s, br4s, br5s, br6s, br7s, br8s  *widget.Label
-	br9s, br10s, br11s, br12s, br13s, br14s, br15s, br16s *widget.Label
-	sps, pcs                                              *widget.Label
-	w                                                     fyne.Window
-	status                                                string
-
+	c                     *cpusimple.CPU
+	CPUStatus             string
+	sps, pcs              *widget.Label
+	w                     fyne.Window
+	status                string = "CPU status is displayed here."
 	stackDisplay          string
 	stackLabelWidget      *widget.Label
 	stackHeader           *widget.Label
+	registerHeader        *widget.Label
+	registerDisplay       string
+	registerDisplayWidget *widget.Label
 	memoryDisplay         string
 	memoryGridLabel       *widget.Label
 	memoryLabel           *widget.Label
@@ -42,6 +37,7 @@ var (
 	resetButton           *widget.Button
 	pauseButton           *widget.Button
 	exitButton            *widget.Button
+	mainContainer         *fyne.Container
 	buttonsContainer      *fyne.Container
 	settingsContainer     *fyne.Container
 	statusContainer       *fyne.Container
@@ -51,6 +47,7 @@ var (
 	cpuInternalsContainer *fyne.Container
 	speedContainer        *fyne.Container
 	centerContainer       *fyne.Container
+	middleContainer       *fyne.Container
 )
 
 var Console = container.NewVBox()
@@ -58,16 +55,17 @@ var ConsoleScroller = container.NewVScroll(Console)
 
 func New(cpu *cpusimple.CPU, reset func(), load func(), step func(), run func(), pause func(), halt func(), exit func()) fyne.Window {
 
-	c = cpu
+	c = cpu // All data comes from the CPU structure object
 	a := app.NewWithID("simpleCPU")
 	w = a.NewWindow("Simple CPU Simulator")
 	cpu.SetRunning(true)
 
-	inputCPUClock = widget.NewEntry()
-	inputCPUClock.SetText("0")
+	// Color backgrounds to be used in container stacks
+	registerBackground := canvas.NewRectangle(color.RGBA{R: 173, G: 219, B: 156, A: 200})
+	stackBackground := canvas.NewRectangle(color.RGBA{R: 173, G: 219, B: 156, A: 200})
+	memoryBackground := canvas.NewRectangle(color.RGBA{R: 223, G: 159, B: 173, A: 200})
 
-	status = "CPU status is displayed here."
-
+	// Control buttons
 	loadButton = widget.NewButton("Load", load)
 	runButton = widget.NewButton("Run", run)
 	haltButton = widget.NewButton("Halt", halt)
@@ -76,152 +74,10 @@ func New(cpu *cpusimple.CPU, reset func(), load func(), step func(), run func(),
 	pauseButton = widget.NewButton("Pause", pause)
 	exitButton = widget.NewButton("Exit", exit)
 
-	registerHeader := widget.NewLabel("Registers")
-	registerHeader.TextStyle.Monospace = true
-	registerHeader.TextStyle.Bold = true
-	registerHeader2 := widget.NewLabel("Content")
-	registerHeader2.TextStyle.Monospace = true
-	registerHeader2.TextStyle.Bold = true
-
-	/* 	br0 = binding.BindInt(&cpu.Registers[0])
-	   	br1 = binding.BindInt(&cpu.Registers[1])
-	   	br2 = binding.BindInt(&cpu.Registers[2])
-	   	br3 = binding.BindInt(&cpu.Registers[3])
-	   	br4 = binding.BindInt(&cpu.Registers[4])
-	   	br5 = binding.BindInt(&cpu.Registers[5])
-	   	br6 = binding.BindInt(&cpu.Registers[6])
-	   	br7 = binding.BindInt(&cpu.Registers[7])
-	   	br8 = binding.BindInt(&cpu.Registers[8])
-	   	br9 = binding.BindInt(&cpu.Registers[9])
-	   	br10 = binding.BindInt(&cpu.Registers[10])
-	   	br11 = binding.BindInt(&cpu.Registers[11])
-	   	br12 = binding.BindInt(&cpu.Registers[12])
-	   	br13 = binding.BindInt(&cpu.Registers[13])
-	   	br14 = binding.BindInt(&cpu.Registers[14])
-	   	br15 = binding.BindInt(&cpu.Registers[15])
-	   	br16 = binding.BindInt(&cpu.Registers[16]) */
-
-	/* 	br0s = widget.NewLabelWithData(binding.IntToStringWithFormat(br0, "R0: x%04x"))
-	   	br0s.TextStyle.Monospace = true
-	   	br1s = widget.NewLabelWithData(binding.IntToStringWithFormat(br1, "R1: x%04x"))
-	   	br1s.TextStyle.Monospace = true
-	   	br2s = widget.NewLabelWithData(binding.IntToStringWithFormat(br2, "R2: x%04x"))
-	   	br2s.TextStyle.Monospace = true
-	   	br3s = widget.NewLabelWithData(binding.IntToStringWithFormat(br3, "R3: x%04x"))
-	   	br3s.TextStyle.Monospace = true
-	   	br4s = widget.NewLabelWithData(binding.IntToStringWithFormat(br4, "R4: x%04x"))
-	   	br4s.TextStyle.Monospace = true
-	   	br5s = widget.NewLabelWithData(binding.IntToStringWithFormat(br5, "R5: x%04x"))
-	   	br5s.TextStyle.Monospace = true
-	   	br6s = widget.NewLabelWithData(binding.IntToStringWithFormat(br6, "R6: x%04x"))
-	   	br6s.TextStyle.Monospace = true
-	   	br7s = widget.NewLabelWithData(binding.IntToStringWithFormat(br7, "R7: x%04x"))
-	   	br7s.TextStyle.Monospace = true
-	   	br8s = widget.NewLabelWithData(binding.IntToStringWithFormat(br8, "R8: x%04x"))
-	   	br8s.TextStyle.Monospace = true
-	   	br9s = widget.NewLabelWithData(binding.IntToStringWithFormat(br9, "R9: x%04x"))
-	   	br9s.TextStyle.Monospace = true
-	   	br10s = widget.NewLabelWithData(binding.IntToStringWithFormat(br10, "R10: x%04x"))
-	   	br10s.TextStyle.Monospace = true
-	   	br11s = widget.NewLabelWithData(binding.IntToStringWithFormat(br11, "R11: x%04x"))
-	   	br11s.TextStyle.Monospace = true
-	   	br12s = widget.NewLabelWithData(binding.IntToStringWithFormat(br12, "R12: x%04x"))
-	   	br12s.TextStyle.Monospace = true
-	   	br13s = widget.NewLabelWithData(binding.IntToStringWithFormat(br13, "R13: x%04x"))
-	   	br13s.TextStyle.Monospace = true
-	   	br14s = widget.NewLabelWithData(binding.IntToStringWithFormat(br14, "R14: x%04x"))
-	   	br14s.TextStyle.Monospace = true
-	   	br15s = widget.NewLabelWithData(binding.IntToStringWithFormat(br15, "R15: x%04x"))
-	   	br15s.TextStyle.Monospace = true
-	   	br16s = widget.NewLabelWithData(binding.IntToStringWithFormat(br16, "R16: x%04x"))
-	   	br16s.TextStyle.Monospace = true */
-
-	br0s = widget.NewLabel(fmt.Sprintf("R0: x%04x", cpu.Registers[0]))
-	br0s.TextStyle.Monospace = true
-	br1s = widget.NewLabel(fmt.Sprintf("R0: x%04x", cpu.Registers[1]))
-	br1s.TextStyle.Monospace = true
-	br2s = widget.NewLabel(fmt.Sprintf("R0: x%04x", cpu.Registers[2]))
-	br2s.TextStyle.Monospace = true
-	br3s = widget.NewLabel(fmt.Sprintf("R0: x%04x", cpu.Registers[3]))
-	br3s.TextStyle.Monospace = true
-	br4s = widget.NewLabel(fmt.Sprintf("R0: x%04x", cpu.Registers[4]))
-	br4s.TextStyle.Monospace = true
-	br5s = widget.NewLabel(fmt.Sprintf("R0: x%04x", cpu.Registers[5]))
-	br5s.TextStyle.Monospace = true
-	br6s = widget.NewLabel(fmt.Sprintf("R0: x%04x", cpu.Registers[6]))
-	br6s.TextStyle.Monospace = true
-	br7s = widget.NewLabel(fmt.Sprintf("R0: x%04x", cpu.Registers[7]))
-	br7s.TextStyle.Monospace = true
-	br8s = widget.NewLabel(fmt.Sprintf("R0: x%04x", cpu.Registers[8]))
-	br8s.TextStyle.Monospace = true
-	br9s = widget.NewLabel(fmt.Sprintf("R0: x%04x", cpu.Registers[9]))
-	br9s.TextStyle.Monospace = true
-	br10s = widget.NewLabel(fmt.Sprintf("R0: x%04x", cpu.Registers[10]))
-	br10s.TextStyle.Monospace = true
-	br11s = widget.NewLabel(fmt.Sprintf("R0: x%04x", cpu.Registers[11]))
-	br11s.TextStyle.Monospace = true
-	br12s = widget.NewLabel(fmt.Sprintf("R0: x%04x", cpu.Registers[12]))
-	br12s.TextStyle.Monospace = true
-	br13s = widget.NewLabel(fmt.Sprintf("R0: x%04x", cpu.Registers[13]))
-	br13s.TextStyle.Monospace = true
-	br14s = widget.NewLabel(fmt.Sprintf("R0: x%04x", cpu.Registers[14]))
-	br14s.TextStyle.Monospace = true
-	br15s = widget.NewLabel(fmt.Sprintf("R0: x%04x", cpu.Registers[15]))
-	br15s.TextStyle.Monospace = true
-	br16s = widget.NewLabel(fmt.Sprintf("R0: x%04x", cpu.Registers[16]))
-	br16s.TextStyle.Monospace = true
-
-	r0 := container.New(layout.NewHBoxLayout(), br0s)
-	r1 := container.New(layout.NewHBoxLayout(), br1s)
-	r2 := container.New(layout.NewHBoxLayout(), br2s)
-	r3 := container.New(layout.NewHBoxLayout(), br3s)
-	r4 := container.New(layout.NewHBoxLayout(), br4s)
-	r5 := container.New(layout.NewHBoxLayout(), br5s)
-	r6 := container.New(layout.NewHBoxLayout(), br6s)
-	r7 := container.New(layout.NewHBoxLayout(), br7s)
-	r8 := container.New(layout.NewHBoxLayout(), br8s)
-	r9 := container.New(layout.NewHBoxLayout(), br9s)
-	r10 := container.New(layout.NewHBoxLayout(), br10s)
-	r11 := container.New(layout.NewHBoxLayout(), br11s)
-	r12 := container.New(layout.NewHBoxLayout(), br12s)
-	r13 := container.New(layout.NewHBoxLayout(), br13s)
-	r14 := container.New(layout.NewHBoxLayout(), br14s)
-	r15 := container.New(layout.NewHBoxLayout(), br15s)
-	r16 := container.New(layout.NewHBoxLayout(), br16s)
-
-	registerContainerCol1 := container.New(layout.NewVBoxLayout(), registerHeader, r0, r1, r2, r3, r4, r5, r6, r7, r8)
-	registerContainerCol2 := container.New(layout.NewVBoxLayout(), registerHeader2, r9, r10, r11, r12, r13, r14, r15, r16)
-
-	// Stack
-	stackHeader = widget.NewLabel("Stack\nContent")
-	stackHeader.TextStyle.Monospace = true
-	stackHeader.TextStyle.Bold = true
-	stackDisplay = cpu.GetStack()
-	stackLabelWidget = widget.NewLabel(stackDisplay)
-	stackLabelWidget.TextStyle.Monospace = true
-	stackLabelWidget.TextStyle.Bold = true
-	stackContainer = container.New(
-		layout.NewVBoxLayout(),
-		stackHeader,
-		stackLabelWidget,
-	)
-
-	// Memory
-	memoryDisplay = cpu.GetAllMemory()
-	memoryLabel = widget.NewLabel("Contents of Memory:\n")
-	memoryLabel.TextStyle.Monospace = true
-	memoryLabel.TextStyle.Bold = true
-	memoryGridLabel = widget.NewLabel(memoryDisplay)
-	memoryGridLabel.TextStyle.Monospace = true
-	memoryContainer = container.New(
-		layout.NewVBoxLayout(),
-		memoryLabel,
-		memoryGridLabel,
-	)
-
-	speedContainer = container.New(
-		layout.NewHBoxLayout(),
-		//layout.NewSpacer(),
+	// Clock settings line
+	inputCPUClock = widget.NewEntry()
+	inputCPUClock.SetText("0")
+	speedContainer = container.NewHBox(
 		canvas.NewText("Clock = ", color.Black),
 		inputCPUClock,
 		canvas.NewText("sec  ", color.Black),
@@ -237,28 +93,92 @@ func New(cpu *cpusimple.CPU, reset func(), load func(), step func(), run func(),
 	)
 
 	// CPU Internals: PC, SP
-	// pc = binding.BindInt(&cpu.PC)
-	// sp = binding.BindInt(&cpu.SP)
-	pcs = widget.NewLabel(fmt.Sprintf("R0: x%04x", cpu.PC))
-	sps = widget.NewLabel(fmt.Sprintf("R0: x%04x", cpu.SP))
-	cpuInternalsContainer = container.New(
-		layout.NewHBoxLayout(),
-		//layout.NewSpacer(),
-		container.NewHBox(
-			pcs,
-			//layout.NewSpacer(),
-			sps,
-		),
-		//layout.NewSpacer(),
+	pcs = widget.NewLabel(fmt.Sprintf("PC: x%04x", cpu.PC))
+	pcs.TextStyle.Monospace = true
+	sps = widget.NewLabel(fmt.Sprintf("SP: x%04x", cpu.SP))
+	sps.TextStyle.Monospace = true
+	cpuInternalsContainer = container.NewHBox(
+		pcs,
+		sps,
 	)
 
-	buttonsContainer = container.New(layout.NewHBoxLayout(), resetButton, loadButton, runButton, stepButton, pauseButton, haltButton, exitButton)
-	settingsContainer = container.New(layout.NewVBoxLayout(), buttonsContainer, speedContainer, cpuInternalsContainer)
+	// Stack
+	stackHeader = widget.NewLabel("Stack\n")
+	stackHeader.TextStyle.Monospace = true
+	stackHeader.TextStyle.Bold = true
+	stackDisplay = cpu.GetStack()
+	stackLabelWidget = widget.NewLabel(stackDisplay)
+	stackLabelWidget.TextStyle.Monospace = true
+	stackLabelWidget.TextStyle.Bold = true
+	stackContainer = container.NewStack(
+		stackBackground,
+		container.NewVBox(
+			stackHeader,
+			stackLabelWidget,
+		))
+
+	// Registers
+	registerHeader = widget.NewLabel("Registers\n")
+	registerHeader.TextStyle.Monospace = true
+	registerHeader.TextStyle.Bold = true
+	registerDisplay = cpu.GetRegisters()
+	registerDisplayWidget = widget.NewLabel(registerDisplay)
+	registerDisplayWidget.TextStyle.Monospace = true
+	registerDisplayWidget.TextStyle.Bold = true
+	registerContainer = container.NewStack(
+		registerBackground,
+		container.NewVBox(
+			registerHeader,
+			registerDisplayWidget,
+		))
+
+	// Memory
+	memoryDisplay = cpu.GetAllMemory()
+	memoryLabel = widget.NewLabel("Memory\n")
+	memoryLabel.TextStyle.Monospace = true
+	memoryLabel.TextStyle.Bold = true
+	memoryGridLabel = widget.NewLabel(memoryDisplay)
+	memoryGridLabel.TextStyle.Monospace = true
+	memoryContainer = container.NewStack(
+		memoryBackground,
+		container.NewVBox(
+			memoryLabel,
+			memoryGridLabel,
+		))
+
+	buttonsContainer = container.NewHBox(
+		resetButton,
+		loadButton,
+		runButton,
+		stepButton,
+		pauseButton,
+		haltButton,
+		exitButton,
+	)
+
+	settingsContainer = container.NewVBox(
+		buttonsContainer,
+		speedContainer,
+		cpuInternalsContainer,
+	)
+
+	middleContainer = container.NewHBox(
+		registerContainer,
+		memoryContainer,
+		stackContainer,
+	)
+
 	statusContainer = container.NewVBox(ConsoleScroller)
-	registerContainer = container.NewHBox(registerContainerCol1, registerContainerCol2)
+	registerContainer = container.NewHBox(registerContainer)
 	centerContainer = container.NewHBox(memoryContainer, stackContainer)
 
-	w.SetContent(container.NewBorder(settingsContainer, statusContainer, registerContainer, nil, centerContainer))
+	mainContainer = container.NewVBox(
+		settingsContainer,
+		middleContainer,
+		statusContainer,
+	)
+
+	w.SetContent(mainContainer)
 
 	return w
 }
@@ -266,39 +186,29 @@ func New(cpu *cpusimple.CPU, reset func(), load func(), step func(), run func(),
 func UpdateAll() {
 
 	// Reload
-	/* 	br0.Reload()
-	   	br1.Reload()
-	   	br2.Reload()
-	   	br3.Reload()
-	   	br4.Reload()
-	   	br5.Reload()
-	   	br6.Reload()
-	   	br7.Reload()
-	   	br8.Reload()
-	   	br9.Reload()
-	   	br10.Reload()
-	   	br11.Reload()
-	   	br12.Reload()
-	   	br13.Reload()
-	   	br14.Reload()
-	   	br15.Reload()
-	   	br16.Reload()
-	   	pc.Reload()
-	   	sp.Reload() */
-	refreshRegisters()
+	pcs.SetText(fmt.Sprintf("PC: x%04x", c.PC))
+	sps.SetText(fmt.Sprintf("SP: x%04x", c.SP))
 	stackDisplay = c.GetStack()
 	stackLabelWidget.Text = stackDisplay
 	memoryDisplay = c.GetAllMemory()
 	memoryGridLabel.SetText(memoryDisplay)
+	registerDisplay = c.GetRegisters()
+	registerDisplayWidget.Text = registerDisplay
 
 	// Refresh
+	buttonsContainer.Refresh()
+	speedContainer.Refresh()
+	cpuInternalsContainer.Refresh()
+	settingsContainer.Refresh()
 	stackLabelWidget.Refresh()
+	stackContainer.Refresh()
 	memoryGridLabel.Refresh()
 	memoryContainer.Refresh()
-	stackContainer.Refresh()
-	settingsContainer.Refresh()
-	buttonsContainer.Refresh()
-	cpuInternalsContainer.Refresh()
+	registerContainer.Refresh()
+	middleContainer.Refresh()
+	statusContainer.Refresh()
+	centerContainer.Refresh()
+	mainContainer.Refresh()
 }
 
 func SetStatus(s string) {
@@ -323,26 +233,4 @@ func ConsoleWrite(text string) {
 		ConsoleScroller.ScrollToBottom()
 	}
 	Console.Refresh()
-}
-
-func refreshRegisters() {
-	pcs.SetText(fmt.Sprintf("R0: x%04x", c.PC))
-	sps.SetText(fmt.Sprintf("R0: x%04x", c.SP))
-	br0s.SetText(fmt.Sprintf("R0: x%04x", c.Registers[0]))
-	br1s.SetText(fmt.Sprintf("R0: x%04x", c.Registers[1]))
-	br1s.SetText(fmt.Sprintf("R0: x%04x", c.Registers[2]))
-	br2s.SetText(fmt.Sprintf("R0: x%04x", c.Registers[3]))
-	br3s.SetText(fmt.Sprintf("R0: x%04x", c.Registers[4]))
-	br4s.SetText(fmt.Sprintf("R0: x%04x", c.Registers[5]))
-	br5s.SetText(fmt.Sprintf("R0: x%04x", c.Registers[6]))
-	br6s.SetText(fmt.Sprintf("R0: x%04x", c.Registers[7]))
-	br7s.SetText(fmt.Sprintf("R0: x%04x", c.Registers[8]))
-	br8s.SetText(fmt.Sprintf("R0: x%04x", c.Registers[9]))
-	br9s.SetText(fmt.Sprintf("R0: x%04x", c.Registers[10]))
-	br10s.SetText(fmt.Sprintf("R0: x%04x", c.Registers[11]))
-	br11s.SetText(fmt.Sprintf("R0: x%04x", c.Registers[12]))
-	br12s.SetText(fmt.Sprintf("R0: x%04x", c.Registers[13]))
-	br13s.SetText(fmt.Sprintf("R0: x%04x", c.Registers[14]))
-	br14s.SetText(fmt.Sprintf("R0: x%04x", c.Registers[15]))
-	br15s.SetText(fmt.Sprintf("R0: x%04x", c.Registers[16]))
 }

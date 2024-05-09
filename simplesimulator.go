@@ -13,8 +13,9 @@ import (
 )
 
 const (
-	memSize   = 256
-	stackSize = 16
+	MEMSIZE       = uint16(256)
+	STACKSIZE     = uint16(16)
+	STACKLOCATION = MEMSIZE - STACKSIZE
 )
 
 var (
@@ -27,6 +28,9 @@ var (
 	pauseChan = make(chan string)
 	haltChan  = make(chan string)
 
+	/* 	program = []byte{
+		0x05, 0x81, 0x06, 0xa0, 0x20, 0x11,
+	} */
 	program = []byte{
 		0x00, 0x81, 0xa0, 0x0b, 0x81, 0xa2, 0x01, 0x81, 0xa4, 0xe0,
 		0x80, 0xa1, 0x24, 0x81, 0xa0, 0x01, 0x24, 0x81, 0xa4, 0x42,
@@ -54,8 +58,8 @@ func main() {
 	logger = log.New(os.Stdout, "INFO: ", log.Ldate|log.Ltime|log.Lshortfile)
 
 	cpu.CPUStatus = make(chan string)
-	cpu.SetMemSize(memSize)
-	cpu.SetStackSize(stackSize)
+	cpu.InitMemory(MEMSIZE)
+	cpu.InitStack(STACKLOCATION, STACKSIZE)
 	cpu.SetClock(0)
 
 	// Set up Fyne window before trying to write to Status line!!!
@@ -110,7 +114,7 @@ func step() {
 		go g_Step(stepChan)
 		cpu.FetchInstruction(cpu.Memory)
 		//log.Printf("PC = x%04x, SP = %d", cpu.PC, cpu.SP)
-		dashboard.SetStatus(fmt.Sprintf("Step: PC = %d, SP = %d, S[0] = %d", cpu.PC, cpu.SP, cpu.Stack[0]))
+		dashboard.SetStatus(fmt.Sprintf("Step: PC = %d, SP = %d, S[0] = %d", cpu.PC, cpu.SP, cpu.Memory[cpu.SP]))
 		dashboard.UpdateAll()
 		cpu.SetRunning(false)
 		// //logger.Println("Sleep ", cpu.Clock, " seconds")
@@ -118,7 +122,7 @@ func step() {
 		cpu.SetRunning(false) // Stop CPU
 		//logger.Println("End of memory reached, reset and load new program, or press halt to quit application.")
 		//logger.Printf("End of memory, R0 = %d; PC = %d, SP = %d, S[0] = %d\n", cpu.Registers[0], cpu.PC, cpu.SP, cpu.Stack[0])
-		dashboard.SetStatus(fmt.Sprintf("End of memory reached, reset and load new program, or press halt. PC = %d, SP = %d, S[0] = %d\n", cpu.PC, cpu.SP, cpu.Stack[0]))
+		dashboard.SetStatus(fmt.Sprintf("End of memory reached, reset and load new program, or press halt. PC = %d, SP = %d, S[0] = %d\n", cpu.PC, cpu.SP, cpu.Memory[cpu.SP]))
 		dashboard.UpdateAll()
 		dashboard.UpdateAll()
 		return

@@ -1,6 +1,7 @@
 package cpusimple
 
 import (
+	"encoding/binary"
 	"fmt"
 	"log"
 	"os"
@@ -42,7 +43,8 @@ type CPU struct {
 	SP          uint16 // Stack pointer
 	Flag        bool   // Processor flag
 	Memory      []byte
-	Stack       []uint16
+	StackHead   uint16 // Starting index of stack in Memory array
+	StackSize   uint16
 	Clock       int64       // clock delay in seconds. If = 0, full speed
 	HaltFlag    bool        // Halt flag used to stop CPU
 	RunningFlag bool        // Indicates if CPU is executing a program
@@ -84,8 +86,9 @@ func (c *CPU) FetchInstruction(code []byte) {
 		} else {
 			reg = (instruction&0x1e)>>1 + 1
 		}
-		c.Stack[c.SP] = c.Registers[reg]
-		c.SP++
+		//		c.Stack[c.SP] = c.Registers[reg]
+		c.pushRegOnStack(reg)
+		//		c.SP++
 	case MaskPop: // POP
 		opt := instruction & 0x01
 		var reg byte
@@ -94,8 +97,7 @@ func (c *CPU) FetchInstruction(code []byte) {
 		} else {
 			reg = (instruction&0x1e)>>1 + 1
 		}
-		c.SP--
-		c.Registers[reg] = c.Stack[c.SP]
+		c.popRegFromStack(reg)
 	case MaskGoto: // GOTO
 		opt := instruction & 0x01
 		if opt == 1 { // R0 != 0
@@ -162,14 +164,6 @@ func (c *CPU) ProcessExtendedOpCode(instruction byte) {
 	}
 }
 
-// Return int value (16-bit word) given pointer to two bytes. Assume Big-Endian
-/* func getWord(parts []byte) int {
-	hibyte := int(parts[0])
-	lobyte := int(parts[1])
-	word := (hibyte << 8) + lobyte
-	return word
-} */
-
 // Preprocess takes care of parsing labels to allow forward references in the
 // code
 func (c *CPU) Preprocess(code []byte, codeLength uint16) {
@@ -184,7 +178,7 @@ func (c *CPU) Preprocess(code []byte, codeLength uint16) {
 
 func (c *CPU) Reset() {
 	c.PC = 0
-	c.SP = 0
+	c.SP = c.StackHead
 	c.RunningFlag = false
 	c.HaltFlag = false
 
@@ -196,9 +190,6 @@ func (c *CPU) Reset() {
 	}
 	for i := 0; i < 17; i++ {
 		c.Registers[i] = 0
-	}
-	for i := 0; i < len(c.Stack); i++ {
-		c.Stack[i] = 0
 	}
 }
 
@@ -340,7 +331,11 @@ func (c *CPU) GetAllMemory() string {
 		line = line + "\n"
 		k = k + 16
 	}
+	if k >= len(c.Memory) {
+		return line
+	}
 	endBlock := blocks * 16
+	line = line + fmt.Sprintf("%04x:  ", k)
 	for i := endBlock; i < endBlock+remainder; i++ {
 		line = line + fmt.Sprintf("%02x ", c.Memory[i])
 	}
@@ -352,14 +347,23 @@ func (c *CPU) GetAllMemory() string {
 func (c *CPU) GetStack() string {
 	var s string
 	//s = "\nStack\n"
-	for i := 0; i < len(c.Stack); i++ {
-		s = s + fmt.Sprintf("x%04x\n", c.Stack[i])
+	for i := c.StackHead; i < (c.StackHead + c.StackSize); i++ {
+		s = s + fmt.Sprintf("x%02x\n", c.Memory[i])
 	}
 	return s
 }
 
-// SetMemSize expands Memory slice to specified size and initializes to all zeros
-func (c *CPU) SetMemSize(size uint16) {
+// GetRegisters returns a formatted string of register values
+func (c *CPU) GetRegisters() string {
+	var s string
+	for i := 0; i < len(c.Registers); i++ {
+		s = s + fmt.Sprintf("R%02d: x%04x\n", i, c.Registers[i])
+	}
+	return s
+}
+
+// InitMemory expands Memory slice to specified size and initializes to all zeros
+func (c *CPU) InitMemory(size uint16) {
 	tempSlice := make([]byte, size)
 	var i uint16
 	for i = 1; i < size; i++ {
@@ -368,14 +372,11 @@ func (c *CPU) SetMemSize(size uint16) {
 	c.Memory = append(c.Memory, tempSlice...)
 }
 
-// SetStackSize expands Memory slice to specified size and initializes to all zeros
-func (c *CPU) SetStackSize(size uint16) {
-	tempStackSlice := make([]uint16, size)
-	var i uint16
-	for i = 1; i < size; i++ {
-		tempStackSlice[i] = 0
-	}
-	c.Stack = append(c.Stack, tempStackSlice...)
+// InitStack creates a slice of Memory[] to specified size and initializes to all zeros
+func (c *CPU) InitStack(loc uint16, size uint16) {
+	c.SP = loc
+	c.StackHead = loc
+	c.StackSize = size
 }
 
 // Set CPU clock delay
@@ -406,4 +407,32 @@ func (c *CPU) GetRunning() bool {
 func NewCPU() *CPU {
 	logger = log.New(os.Stdout, "INFO: ", log.Ldate|log.Ltime|log.Lshortfile)
 	return &CPU{}
+}
+
+/**********************
+*
+* Internal functions to implement instruction set
+*
+***********************/
+
+// Pushes the two bytes from specified register onto stack in Big Endian format
+func (c *CPU) pushRegOnStack(reg byte) {
+	b := make([]byte, 2)
+	binary.BigEndian.PutUint16(b[0:], c.Registers[reg])
+	// Push Hi byte
+	c.Memory[c.SP] = b[0] // Hi byte
+	//logger.Printf("Hi byte = x%02x", b[0])
+	c.SP++
+	c.Memory[c.SP] = b[1] // Lo byte
+	//logger.Printf("Lo byte = x%02x", b[1])
+	c.SP++
+}
+
+// Pops the two bytes from the stack into the specified register using the Big Endian format
+func (c *CPU) popRegFromStack(reg byte) uint16 {
+	c.SP = c.SP - 2
+	rval := binary.BigEndian.Uint16(c.Memory[c.SP:])
+	//logger.Printf("SP = x%04x, Register value popped = x%04x", c.SP, rval)
+	c.Registers[reg] = rval
+	return rval
 }

@@ -22,8 +22,8 @@ func TestSum1To10(t *testing.T) {
 
 	cpu := CPU{}
 	cpu.CPUStatus = make(chan string)
-	cpu.SetMemSize(10)
-	cpu.SetStackSize(100)
+	cpu.InitMemory(100)
+	cpu.InitStack(90, 10)
 	cpu.SetClock(0)
 	res := cpu.Run(code, uint16(len(code)))
 	if res != 55 {
@@ -44,8 +44,8 @@ func TestAlternativeSum1To10(t *testing.T) {
 		0x80, 0xa1,
 	}
 	cpu := CPU{}
-	cpu.SetMemSize(10)
-	cpu.SetStackSize(10)
+	cpu.InitMemory(100)
+	cpu.InitStack(90, 10)
 	cpu.SetClock(0)
 	res := cpu.Run(code, uint16(len(code)))
 	if res != 55 {
@@ -95,8 +95,8 @@ func TestMachineCodeGeneration(t *testing.T) {
 		t.Fatalf("Want: %#v Got %#v", code, generatedCode)
 	}
 	cpu := CPU{}
-	cpu.SetMemSize(10)
-	cpu.SetStackSize(10)
+	cpu.InitMemory(100)
+	cpu.InitStack(90, 10)
 	cpu.SetClock(0)
 	res := cpu.Run(generatedCode, uint16(len(generatedCode)))
 	if res != 55 {
@@ -136,8 +136,8 @@ func TestSum1To100(t *testing.T) {
 	}
 	generatedCode := AsmCodeToBytes(asmCode)
 	cpu := CPU{}
-	cpu.SetMemSize(10)
-	cpu.SetStackSize(10)
+	cpu.InitMemory(100)
+	cpu.InitStack(90, 10)
 	cpu.SetClock(0)
 	res := cpu.Run(generatedCode, uint16(len(generatedCode)))
 	if res != 5050 {
@@ -303,8 +303,8 @@ func TestSequence1To15(t *testing.T) {
 	}
 	code := AsmCodeToBytes(asmCode)
 	cpu := CPU{}
-	cpu.SetMemSize(10)
-	cpu.SetStackSize(10)
+	cpu.InitMemory(100)
+	cpu.InitStack(90, 10)
 	cpu.SetClock(0)
 	res := cpu.Run(code, uint16(len(code)))
 	if res != 75 {
@@ -559,8 +559,8 @@ func TestSequence1To10000(t *testing.T) {
 	}
 	code := AsmCodeToBytes(asmCode)
 	cpu := CPU{}
-	cpu.SetMemSize(10)
-	cpu.SetStackSize(10)
+	cpu.InitMemory(100)
+	cpu.InitStack(90, 10)
 	cpu.SetClock(0)
 	res := cpu.Run(code, len(code))
 	if res != 36678337 {
