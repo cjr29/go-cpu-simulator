@@ -6,7 +6,9 @@ This CPU simulator is a re-implementation in Go of my (Wojciech S. Gac) solution
 
 ## Architecture description
 
-The CPU has 17 registers, special register `R0`, which serves as an accumulator, among other things, and 16 general purpose registers, referred to as `R1`-`R16` in this document. Programs are sequences of 8-bit bytes, each byte encoding a single instruction, together with its arguments. The CPU also has a stack of size 1000. It is assumed that after completion the results of a program are stored in `R0`.
+The CPU has 17 registers, special register `R0`, which serves as an accumulator, among other things, and 16 general purpose registers, referred to as `R1`-`R16` in this document. Programs are sequences of 8-bit bytes, each byte encoding a single instruction, together with its arguments. It is assumed that after completion, the results of a program are stored in `R0`. This simple CPU uses a stack that starts at the highest even memory location available and counts downward as items are pushed onto the stack. When a PUSH is executed, the SP is first decrements by 2, and then the low byte of the target is pushed onto the stack. Next, the SP is decremented and the high bytes is pushed. The SP is left pointing to the high byte of the last item pushed onto the stack. This results in a "Big Endian" storage scheme with the most significant byte at the lowest memory address.
+
+The initial memory size is set upon initialization of the CPU structure. The PC is set to 0 and the SP is set to the highest available even address. All registers and memory are zeroed. Programs are loaded as sequence of bytes starting at address x0000. Programs should always terminate with a HALT instruction to avoid infinite loops and memory overrun errors.
 
 ## Instructions
 
@@ -19,14 +21,15 @@ In the description below the following symbolic bits are used:
 
 Note: The label `L` is not a normal machine code usage. In this context, it provides a simple means for using GOTO
 instructions without having to reference a memory address. A proper assembler would translate a label in the assembly
-code to a memory address to which a JUMP instruction would move the Program Counter (PC). A future enhancement to this
-simulator will remove the need for the preprocessor and `LABEL` instruction.
+code to a memory address to which a JUMP instruction would move the Program Counter (PC). The extended instruction set
+to this simulator removes the need for the preprocessor and `LABEL` instruction. Instead, it provides for a CALL and
+RETurn to implement subroutines using the stack to maintain state.
 
 The table below describes the complete instruction set, together with bit patterns:
 
 Instruction|Bit Pattern|Description
 ----------|----|-----
-SET|000VVVVV|Set R0 to VVVVV
+SET|000XVVVV|Set R0 to VVVV
 ADD|001RRRRX|R0 += RRRR
 SUB|010RRRRX|R0 -= RRRR
 MUL|011RRRRX|R0 *= RRRR
@@ -34,6 +37,18 @@ PUSH|100RRRRS|if (S==1) {PUSH(R0)} else {PUSH(RRRR)}
 POP|101RRRRS|if (S==1) {POP(R0)} else {POP(RRRR)}
 GOTO|110LLLLS|if (S==1) {if (R0!=0) {GOTO LLLL}} else {IF (R0==0) {GOTO LLLL}}
 LABEL|111LLLLX|Mark next instruction with label LLLL
+
+### Extended Instruction Set
+Instruction|Bit Pattern|Description
+----------|----|-----
+NOOP|00000000|PC++
+HALT|00000001|CPU stops processing at current PC
+STORE|00000010|R0 --> PC+1, PC+2 (big endian)
+LOAD|00000011|R0 <-- PC+1, PC+2 (big endian)
+SWAP|00000100|R0 <--> R1
+CALL|00000101|SP-2, PC --> SP (big endian), PC <-- (PC+1,PC+2)
+RET|00000110|PC <-- SP (big endian), SP+2
+CMP|00000111|R0 compare R1, if equal, CMPFLAG true, else CMPFLAG false
 
 ## Assembler
 
