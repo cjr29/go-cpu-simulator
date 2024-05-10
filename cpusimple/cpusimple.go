@@ -343,11 +343,10 @@ func (c *CPU) GetAllMemory() string {
 	return line
 }
 
-// GetStack returns a formatted string of bytes beginning at SP(0)
+// GetStack returns a formatted string of 16 bytes beginning at SP(0) down
 func (c *CPU) GetStack() string {
 	var s string
-	//s = "\nStack\n"
-	for i := c.StackHead; i < (c.StackHead + c.StackSize); i++ {
+	for i := c.StackHead; i > c.StackHead-16; i-- {
 		s = s + fmt.Sprintf("x%02x\n", c.Memory[i])
 	}
 	return s
@@ -372,11 +371,14 @@ func (c *CPU) InitMemory(size uint16) {
 	c.Memory = append(c.Memory, tempSlice...)
 }
 
-// InitStack creates a slice of Memory[] to specified size and initializes to all zeros
-func (c *CPU) InitStack(loc uint16, size uint16) {
-	c.SP = loc
-	c.StackHead = loc
-	c.StackSize = size
+// InitStack initializes the SP to the specified address
+func (c *CPU) InitStack(loc uint16) {
+	head := loc
+	if head%2 != 0 {
+		head = head - 1
+	}
+	c.SP = head
+	c.StackHead = head
 }
 
 // Set CPU clock delay
@@ -419,20 +421,19 @@ func NewCPU() *CPU {
 func (c *CPU) pushRegOnStack(reg byte) {
 	b := make([]byte, 2)
 	binary.BigEndian.PutUint16(b[0:], c.Registers[reg])
+	c.SP-- // Move SP to first available position
 	// Push Hi byte
-	c.Memory[c.SP] = b[0] // Hi byte
-	//logger.Printf("Hi byte = x%02x", b[0])
-	c.SP++
-	c.Memory[c.SP] = b[1] // Lo byte
-	//logger.Printf("Lo byte = x%02x", b[1])
-	c.SP++
+	c.Memory[c.SP] = b[1] // Hi byte
+	c.SP--
+	c.Memory[c.SP] = b[0] // Lo byte
+	// SP now points to MSB of value
 }
 
 // Pops the two bytes from the stack into the specified register using the Big Endian format
 func (c *CPU) popRegFromStack(reg byte) uint16 {
-	c.SP = c.SP - 2
+	// SP currently points to last value at top of stack
 	rval := binary.BigEndian.Uint16(c.Memory[c.SP:])
-	//logger.Printf("SP = x%04x, Register value popped = x%04x", c.SP, rval)
 	c.Registers[reg] = rval
+	c.SP = c.SP + 2
 	return rval
 }

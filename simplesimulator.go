@@ -15,7 +15,7 @@ import (
 const (
 	MEMSIZE       = uint16(256)
 	STACKSIZE     = uint16(16)
-	STACKLOCATION = MEMSIZE - STACKSIZE
+	STACKLOCATION = MEMSIZE - 1
 )
 
 var (
@@ -28,7 +28,7 @@ var (
 	pauseChan = make(chan string)
 	haltChan  = make(chan string)
 
-	/* 	program = []byte{
+	/* program = []byte{
 		0x05, 0x81, 0x06, 0xa0, 0x20, 0x11,
 	} */
 	program = []byte{
@@ -59,7 +59,8 @@ func main() {
 
 	cpu.CPUStatus = make(chan string)
 	cpu.InitMemory(MEMSIZE)
-	cpu.InitStack(STACKLOCATION, STACKSIZE)
+	cpu.InitStack(STACKLOCATION)
+	logger.Printf("Stack head at %x04x", cpu.SP)
 	cpu.SetClock(0)
 
 	// Set up Fyne window before trying to write to Status line!!!
