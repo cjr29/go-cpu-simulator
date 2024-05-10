@@ -103,7 +103,7 @@ func New(cpu *cpusimple.CPU, reset func(), load func(), step func(), run func(),
 	)
 
 	// Stack
-	stackHeader = widget.NewLabel("Stack\n")
+	stackHeader = widget.NewLabel("Top of Stack\n")
 	stackHeader.TextStyle.Monospace = true
 	stackHeader.TextStyle.Bold = true
 	stackDisplay = cpu.GetStack()

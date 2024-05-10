@@ -178,7 +178,7 @@ func (c *CPU) Preprocess(code []byte, codeLength uint16) {
 
 func (c *CPU) Reset() {
 	c.PC = 0
-	c.SP = c.StackHead
+	c.SP = c.StackHead + 2
 	c.RunningFlag = false
 	c.HaltFlag = false
 
@@ -343,11 +343,11 @@ func (c *CPU) GetAllMemory() string {
 	return line
 }
 
-// GetStack returns a formatted string of 16 bytes beginning at SP(0) down
+// GetStack returns a formatted string of 16 words (big-endian) beginning at SP down to Head
 func (c *CPU) GetStack() string {
 	var s string
-	for i := c.StackHead; i > c.StackHead-16; i-- {
-		s = s + fmt.Sprintf("x%02x\n", c.Memory[i])
+	for i := c.SP; i <= c.StackHead; i = i + 2 {
+		s = s + fmt.Sprintf("%04x: x%04x\n", i, binary.BigEndian.Uint16(c.Memory[i:]))
 	}
 	return s
 }
