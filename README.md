@@ -95,3 +95,32 @@ This re-architecting of the simulator now supports the introduction of more comp
 
 Here is a sample of what you will see on the dashboard
 ![Dashboard](./dashboard.png)
+
+## Building
+First be sure the lates version of golang is installed.
+```
+$ wget https://dl.google.com/go/go1.22.3.linux-armv6l.tar.gz -O go.tar.gz
+$ sudo apt-get install golang gcc libegl1-mesa-dev xorg-dev
+$ sudo tar -C /usr/local -xzf go.tar.gz
+$ nano ~/.bashrc
+```
+Add these two lines to the bottom of .bashrc
+```
+export GOPATH=$HOME/go
+export PATH=/usr/local/go/bin:$PATH:$GOPATH/bin
+```
+Tell the OS to use the latest
+```
+$ source ~/.bashrc
+$ go version
+go version go1.22.3 linux/arm
+```
+
+Clone the github repo for go-cpu-simulator
+
+```
+cd go-cpu-simulator
+go mod tidy
+go run go-cpu-simulator
+```
+
