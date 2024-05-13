@@ -1,8 +1,10 @@
 # Introduction
 
-This CPU simulator is a re-implementation in Go of my (Wojciech S. Gac) solution to a programming contest held at my workplace recently. It's also the result of my growing interest in trying to understand low-level details of how processors carry out computation. The architecture of this particular processor is very simplistic, allowing easy understanding of its internals, at the cost of making actual programming cumbersome and tedious.
+This CPU simulator project is my way of learning the Go programming language. My interest in microprocessors led to my choice of a microprocessor simulator as the base of the project. I've found the best way to learn new programming languages is to read and work with other's code. I found a basic CPU simulator in Go by Wojciech S. Gac. The cod ewas a single package and file with only seven instructions. Just reading Wojtek's code to understand the CPU and how the instructions worked gave me some solid understanding og Go syntax and semantics.
 
-**Chris Riddick has added a GUI front-end to the simulator. The GUI is based on the Fyne.io API library that supports Mac, Windows, and Linux.**
+I decided I wanted to integrate a graphical user interface (GUI) dashboard with the simulator in order to watch the internal working of the CPU and experiment with the instructions. I selected the Fyne.io cross-platform library for its completeness and coverage of Linux, macOS, and Windows.
+
+I added an extended instruction set as well as re-architecting the memory and stack to make this more like an early microprocessor. The extended instruction set uses bit 4 as a flag to activate an extended instruction. Extended instructions may use additional bytes following the actual instruction byte to represent a memory address or value.
 
 ## Architecture description
 
@@ -93,3 +95,20 @@ This re-architecting of the simulator now supports the introduction of more comp
 
 Here is a sample of what you will see on the dashboard
 ![Dashboard](./dashboard.png)
+
+## Building
+First be sure the latest version of golang is installed.
+```
+$ sudo rm -rf /usr/local/go && curl -sSL "https://go.dev/dl/go1.21.6.linux-arm64.tar.gz" | sudo tar -xz -C /usr/local
+$ echo 'export PATH=$PATH:/usr/local/go/bin' >> $HOME/.profile
+$ source $HOME/.profile
+$ go version
+go version go1.21.6 linux/arm64
+```
+Clone the github repo for go-cpu-simulator
+```
+$ cd go-cpu-simulator
+$ go mod tidy
+$ go run go-cpu-simulator
+```
+

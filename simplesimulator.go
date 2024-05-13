@@ -59,6 +59,8 @@ func main() {
 
 	logger = log.New(os.Stdout, "INFO: ", log.Ldate|log.Ltime|log.Lshortfile)
 
+	os.Setenv("FYNE_THEME", "light")
+
 	cpu.CPUStatus = make(chan string)
 	cpu.InitMemory(MEMSIZE)
 	cpu.InitStack(STACKHEAD)
