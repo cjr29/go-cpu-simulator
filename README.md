@@ -51,6 +51,7 @@ SWAP|00000100|R0 <--> R1
 CALL|00000101|SP-2, PC --> SP (big endian), PC <-- (PC+1,PC+2)
 RET|00000110|PC <-- SP (big endian), SP+2
 CMP|00000111|R0 compare R1, if equal, CMPFLAG true, else CMPFLAG false
+XSET|00001000|R0 <-- Set R0 to value in next two bytes (big endian)
 
 ## Assembler
 
