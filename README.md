@@ -97,30 +97,18 @@ Here is a sample of what you will see on the dashboard
 ![Dashboard](./dashboard.png)
 
 ## Building
-First be sure the lates version of golang is installed.
+First be sure the latest version of golang is installed.
 ```
-$ wget https://dl.google.com/go/go1.22.3.linux-armv6l.tar.gz -O go.tar.gz
-$ sudo apt-get install golang gcc libegl1-mesa-dev xorg-dev
-$ sudo tar -C /usr/local -xzf go.tar.gz
-$ nano ~/.bashrc
-```
-Add these two lines to the bottom of .bashrc
-```
-export GOPATH=$HOME/go
-export PATH=/usr/local/go/bin:$PATH:$GOPATH/bin
-```
-Tell the OS to use the latest
-```
-$ source ~/.bashrc
+$ sudo rm -rf /usr/local/go && curl -sSL "https://go.dev/dl/go1.21.6.linux-arm64.tar.gz" | sudo tar -xz -C /usr/local
+$ echo 'export PATH=$PATH:/usr/local/go/bin' >> $HOME/.profile
+$ source $HOME/.profile
 $ go version
-go version go1.22.3 linux/arm
+go version go1.21.6 linux/arm64
 ```
-
 Clone the github repo for go-cpu-simulator
-
 ```
-cd go-cpu-simulator
-go mod tidy
-go run go-cpu-simulator
+$ cd go-cpu-simulator
+$ go mod tidy
+$ go run go-cpu-simulator
 ```
 
