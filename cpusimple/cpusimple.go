@@ -7,7 +7,6 @@ import (
 	"os"
 	"strconv"
 	"strings"
-	"time"
 )
 
 // The constants below are masks for corresponding machine instructions
@@ -22,18 +21,21 @@ const (
 	MaskLabel = 0xe0
 
 	// Extended instrcution set
-	MaskExtended = 0xf0
-	NOOP         = 0x00 // No operation, move to next PC
-	HALT         = 0x01 // Stop CPU execution at current PC
-	STORE        = 0x02 // Store contents of R0 at memory location addressed by next two bytes (big endian)
-	LOAD         = 0x03 // Load R0 with two bytes from memory location addressed by next two bytes
-	SWAP         = 0x04 // Exchange contents of R0 with R1
-	SUB          = 0x05 // Jump to subroutine at PC,PC++, pushing PC+2 onto stack
-	RET          = 0x06 // Return from subroutine, popping PC from stack
-	CMP          = 0x07 // Compare contents of R0 with contents of R1 and set CPU Flag to true if matched or false if not
+	MaskExtended = 0x10
+	NOOP         = 0x10 // No operation, move to next PC
+	HALT         = 0x11 // Stop CPU execution at current PC
+	STORE        = 0x12 // Store contents of R0 at memory location addressed by next word (big endian)
+	LOAD         = 0x13 // Load R0 with word from memory location addressed by next word
+	SWAP         = 0x14 // Exchange contents of reg specified by hi nibble of next byte with reg by lo nibble
+	CALL         = 0x15 // Jump to subroutine at PC,PC++, pushing PC+2 onto stack
+	RET          = 0x16 // Return from subroutine, popping PC from stack
+	CMP          = 0x17 // Compare contents of R0 with contents of R1 and set CPU Flag to true if matched or false if not
+	XSET         = 0x18 // R0 <-- Set R0 to value in next two bytes (big endian)
 )
 
 var logger *log.Logger
+
+// var errorLogger *log.Logger
 
 // CPU is the central structure representing the processor with its resources
 type CPU struct {
@@ -45,7 +47,7 @@ type CPU struct {
 	Memory      []byte
 	StackHead   uint16 // Starting index of stack in Memory array
 	StackSize   uint16
-	Clock       int64       // clock delay in seconds. If = 0, full speed
+	Clock       float64     // clock delay in seconds. If = 0, full speed
 	HaltFlag    bool        // Halt flag used to stop CPU
 	RunningFlag bool        // Indicates if CPU is executing a program
 	CPUStatus   chan string // Channel for passing status to monitor goroutines
@@ -53,13 +55,16 @@ type CPU struct {
 
 // FetchInstruction is a dispatcher function, which takes care of properly
 // interpreting bytes as instructions and carrying those out
+// The CPU control unit is the only thing that knows when an instruction is done
+// and, therefore, it should set the PC to the next location past the current instruction
+// when it is done. Fetch aslways assumes it is pointing at the next instruction.
 func (c *CPU) FetchInstruction(code []byte) {
 	instruction := code[c.PC]
-	c.PC++
+	// c.PC++
 	opt := instruction & MaskExtended
 	if opt == 0x10 {
 		// Handle extended instruction
-		logger.Println("Extended instruction set op code. Handle it.")
+		// logger.Println("Extended instruction set op code. Handle it.")
 		c.ProcessExtendedOpCode(instruction)
 		return
 	}
@@ -69,15 +74,19 @@ func (c *CPU) FetchInstruction(code []byte) {
 	case MaskSet: // SET
 		val := instruction & 0x1f
 		c.Registers[0] = uint16(val)
+		c.PC++
 	case MaskAdd: // ADD
 		reg := (instruction&0x1e)>>1 + 1
 		c.Registers[0] += c.Registers[reg]
+		c.PC++
 	case MaskSub: // SUB
 		reg := (instruction&0x1e)>>1 + 1
 		c.Registers[0] -= c.Registers[reg]
+		c.PC++
 	case MaskMul: // MUL
 		reg := (instruction&0x1e)>>1 + 1
 		c.Registers[0] *= c.Registers[reg]
+		c.PC++
 	case MaskPush: // PUSH
 		opt := instruction & 0x01
 		var reg byte
@@ -86,9 +95,8 @@ func (c *CPU) FetchInstruction(code []byte) {
 		} else {
 			reg = (instruction&0x1e)>>1 + 1
 		}
-		//		c.Stack[c.SP] = c.Registers[reg]
 		c.pushRegOnStack(reg)
-		//		c.SP++
+		c.PC++
 	case MaskPop: // POP
 		opt := instruction & 0x01
 		var reg byte
@@ -98,6 +106,7 @@ func (c *CPU) FetchInstruction(code []byte) {
 			reg = (instruction&0x1e)>>1 + 1
 		}
 		c.popRegFromStack(reg)
+		c.PC++
 	case MaskGoto: // GOTO
 		opt := instruction & 0x01
 		if opt == 1 { // R0 != 0
@@ -109,6 +118,7 @@ func (c *CPU) FetchInstruction(code []byte) {
 				c.PC = c.Labels[(instruction&0x1e)>>1]
 			}
 		}
+		c.PC++
 	case MaskLabel: // LABEL
 		break
 	}
@@ -116,41 +126,68 @@ func (c *CPU) FetchInstruction(code []byte) {
 
 func (c *CPU) ProcessExtendedOpCode(instruction byte) {
 	logger.Println("ProcessExtendedOpCode")
-	op := instruction & 0x0f
+	op := instruction & 0x1f
+	//logger.Printf("OP: %02x", op)
 	switch op {
 	case HALT:
 		logger.Println("HALT instruction")
 		c.RunningFlag = false
 		c.HaltFlag = true
+		c.CPUStatus <- "HALT instruction encountered. Execution halted."
+		c.PC++
 	case NOOP:
 		logger.Println("NOOP instruction")
+		c.PC++
 	case STORE:
 		// Stores the two bytes of R0 at the location specified by the next two bytes from the PC
 		// Use Big-Endian for storing.
-		c.Memory[c.PC] = byte(c.Registers[0] >> 8)
-		c.Memory[c.PC+1] = byte(c.Registers[0] & 0x00ff)
-		c.PC = c.PC + 2
+		//c.putRegInMemory(0)
+		c.PC++ // First get the destination address
+		addr := binary.BigEndian.Uint16(c.Memory[c.PC:])
+		b := make([]byte, 2)
+		binary.BigEndian.PutUint16(b[0:], c.Registers[0])
+		// Push Hi byte
+		c.Memory[addr] = b[0]   // Hi byte
+		c.Memory[addr+1] = b[1] // Lo byte
+		c.PC = c.PC + 2         // Point to next instruction
+		// PC now points to next instruction
 		logger.Println("STORE instruction")
 	case LOAD:
 		logger.Println("LOAD instruction")
-		// Loads the two bytes starting at PC into R0
-		hibyte := uint16(c.Memory[c.PC])
-		lobyte := uint16(c.Memory[c.PC+1])
-		c.Registers[0] = (hibyte << 8) + lobyte
-		c.PC = c.PC + 2
+		// Loads the two bytes starting at location addressed by next two bytes into R0
+		//loc := c.getMemoryAddressPC()
+		// PC currently points to next byte in memory
+		c.PC++ // Point to the operand
+		loc := binary.BigEndian.Uint16(c.Memory[c.PC:])
+		c.Registers[0] = binary.BigEndian.Uint16(c.Memory[loc:])
+		c.PC = c.PC + 2 // Point to next instruction
+		//logger.Printf("LOAD Memory address retrieved: x%04x", loc)
 	case SWAP:
 		logger.Println("SWAP instruction")
-		// Exchange the contents of R0 with R1 and vice versa
-		temp := c.Registers[0]
-		c.Registers[0] = c.Registers[1]
-		c.Registers[1] = temp
-	case SUB:
+		// Exchange the contents of Rx with Ry and vice versa
+		// Rx specified by hi nibble, Ry by lo nibble of next byte
+		//logger.Printf("SWAP: PC = x%04x", c.PC)
+		c.PC++
+		regs := c.Memory[c.PC]
+		//logger.Printf("SWAP: regs = x%02x", regs)
+		rx := regs >> 4
+		ry := regs & 0x0f
+		//logger.Printf("SAWP: rx=x%02x, ry=x%02x", rx, ry)
+		temp := c.Registers[rx]
+		c.Registers[rx] = c.Registers[ry]
+		c.Registers[ry] = temp
+		c.PC++ // Next instruction
+	case CALL:
 		logger.Println("SUB instruction")
 		// Jump to subroutine at address pointed to by PC,PC++, pushing PC+2 onto stack
-
+		c.PC++                                                 // Point to the CALL operand
+		subroutine := binary.BigEndian.Uint16(c.Memory[c.PC:]) // Address of subroutine
+		c.pushPCOnStack()                                      // Push the return address on the stack
+		c.PC = subroutine                                      // Jump to subroutine
 	case RET:
 		logger.Println("RET instruction")
 		// Return from subroutine by popping the return address off the stack and setting PC to that value
+		c.popPCFromStack() // PC now points to the next instruction after returning
 	case CMP:
 		logger.Println("CMP instruction")
 		// Compare contents of R0 with contents of R1 and set CPU Flag to true if matched or false if not
@@ -159,8 +196,22 @@ func (c *CPU) ProcessExtendedOpCode(instruction byte) {
 		} else {
 			c.Flag = false
 		}
+		c.PC++ // Next instruction
+	case XSET:
+		logger.Println("XSET instruction")
+		// Get next two bytes following this instruction in big endian and store in R0
+		c.PC++
+		rval := binary.BigEndian.Uint16(c.Memory[c.PC:])
+		c.Registers[0] = rval
+		// logger.Printf("Value retrieved at PC = x%04x", rval)
+		c.PC = c.PC + 2 // Point to next instruction
 	default:
-		logger.Println("Undefined extended instruction")
+		logger.Println("Undefined extended instruction, skipped.")
+		c.SetRunning(false)
+		c.SetHalt(true)
+		// log.Printf("Program finished. R0 = %d; PC = %d, SP = %d, S[0] = %d\n", c.Registers[0], c.PC, c.SP, c.Stack[0])
+		// logger.Println("End of memory fault. Execution halted.")
+		c.CPUStatus <- "Undefined extended instruction, execution halted."
 	}
 }
 
@@ -195,10 +246,10 @@ func (c *CPU) Reset() {
 
 // Run resets the CPU, carries out a sequence of instruction and finally returns
 // with a string indicating status
-func (c *CPU) RunFromPC(codeLength int) {
+/* func (c *CPU) RunFromPC(codeLength int) {
 	for c.PC < uint16(len(c.Memory)) {
 		if !c.RunningFlag {
-			logger.Println("CPU exiting run loop.")
+			// logger.Println("CPU exiting run loop.")
 			c.CPUStatus <- "CPU exiting run loop."
 			return
 		}
@@ -210,9 +261,10 @@ func (c *CPU) RunFromPC(codeLength int) {
 	c.SetRunning(false)
 	c.SetHalt(true)
 	// log.Printf("Program finished. R0 = %d; PC = %d, SP = %d, S[0] = %d\n", c.Registers[0], c.PC, c.SP, c.Stack[0])
-	logger.Println("End of memory fault. Execution halted.")
+	// logger.Println("End of memory fault. Execution halted.")
 	c.CPUStatus <- "End of memory fault. Execution halted."
 }
+*/
 
 // DO NOT DELETE! Used by go tests
 // Run resets the CPU, carries out a sequence of instruction and finally returns
@@ -382,7 +434,7 @@ func (c *CPU) InitStack(loc uint16) {
 }
 
 // Set CPU clock delay
-func (c *CPU) SetClock(delay int64) {
+func (c *CPU) SetClock(delay float64) {
 	c.Clock = delay
 }
 
@@ -421,19 +473,68 @@ func NewCPU() *CPU {
 func (c *CPU) pushRegOnStack(reg byte) {
 	b := make([]byte, 2)
 	binary.BigEndian.PutUint16(b[0:], c.Registers[reg])
-	c.SP-- // Move SP to first available position
-	// Push Hi byte
-	c.Memory[c.SP] = b[1] // Hi byte
-	c.SP--
+	c.SP--                // Move SP to first available position
 	c.Memory[c.SP] = b[0] // Lo byte
+	c.SP--
+	c.Memory[c.SP] = b[1] // Hi byte
+	// SP now points to MSB of value
+}
+
+// Pushes the two bytes from specified register onto stack in Big Endian format
+func (c *CPU) pushPCOnStack() {
+	b := make([]byte, 2)
+	binary.BigEndian.PutUint16(b[0:], c.PC)
+	c.SP--                // Move SP to first available position
+	c.Memory[c.SP] = b[0] // Lo byte, Hi Addr
+	c.SP--
+	c.Memory[c.SP] = b[1] // Hi byte, Lo Addr
 	// SP now points to MSB of value
 }
 
 // Pops the two bytes from the stack into the specified register using the Big Endian format
-func (c *CPU) popRegFromStack(reg byte) uint16 {
+func (c *CPU) popRegFromStack(reg byte) {
 	// SP currently points to last value at top of stack
-	rval := binary.BigEndian.Uint16(c.Memory[c.SP:])
+	rval := binary.LittleEndian.Uint16(c.Memory[c.SP:])
 	c.Registers[reg] = rval
 	c.SP = c.SP + 2
+}
+
+// Pops the two bytes from the stack into the program counter using the Big Endian format
+func (c *CPU) popPCFromStack() {
+	// SP currently points to last value at top of stack
+	c.PC = binary.LittleEndian.Uint16(c.Memory[c.SP:])
+	c.SP = c.SP + 2
+}
+
+/* // Gets the two bytes from memory at current PC and returns uint16 value using the Big Endian format
+func (c *CPU) getMemoryAddressPC() uint16 {
+	// PC currently points to next byte in memory
+	rval := binary.LittleEndian.Uint16(c.Memory[c.PC:])
+	c.PC = c.PC + 1 // Point to last byte of this instruction before returning
 	return rval
 }
+
+// Pushes the two bytes from specified register into memory in Big Endian format at current PC
+func (c *CPU) putRegInMemory(reg byte) {
+	// First get the destination address
+	c.PC++
+	addr := binary.BigEndian.Uint16(c.Memory[c.PC:])
+	c.PC = c.PC + 1 // Point to last byte of instruction
+	b := make([]byte, 2)
+	binary.BigEndian.PutUint16(b[0:], c.Registers[reg])
+	// Push Hi byte
+	c.Memory[addr] = b[0]   // Hi byte
+	c.Memory[addr+1] = b[1] // Lo byte
+	// PC now points to next instruction
+}
+
+// Loads the two bytes from inout memory address into the specified register using the Big Endian format
+func (c *CPU) loadRegFromAddr(addr uint16, reg byte) uint16 {
+	if addr > uint16(len(c.Memory)) {
+		// errorLogger = log.New(os.Stderr, "ERROR: LOAD Memory address out of range.", 1)
+		return 0
+	}
+	rval := binary.BigEndian.Uint16(c.Memory[addr:])
+	c.Registers[reg] = rval
+	return rval
+} */
