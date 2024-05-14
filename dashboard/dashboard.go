@@ -58,7 +58,6 @@ func New(cpu *cpusimple.CPU, reset func(), load func(), step func(), run func(),
 	c = cpu // All data comes from the CPU structure object
 	a := app.NewWithID("simpleCPU")
 	w = a.NewWindow("Simple CPU Simulator")
-	cpu.SetRunning(true)
 
 	// Color backgrounds to be used in container stacks
 	registerBackground := canvas.NewRectangle(color.RGBA{R: 173, G: 219, B: 156, A: 200})

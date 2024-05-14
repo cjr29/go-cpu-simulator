@@ -39,18 +39,17 @@ var logger *log.Logger
 
 // CPU is the central structure representing the processor with its resources
 type CPU struct {
-	Registers   [17]uint16
-	Labels      [16]uint16
-	PC          uint16 // Program counter
-	SP          uint16 // Stack pointer
-	Flag        bool   // Processor flag
-	Memory      []byte
-	StackHead   uint16 // Starting index of stack in Memory array
-	StackSize   uint16
-	Clock       float64     // clock delay in seconds. If = 0, full speed
-	HaltFlag    bool        // Halt flag used to stop CPU
-	RunningFlag bool        // Indicates if CPU is executing a program
-	CPUStatus   chan string // Channel for passing status to monitor goroutines
+	Registers [17]uint16
+	Labels    [16]uint16
+	PC        uint16 // Program counter
+	SP        uint16 // Stack pointer
+	Flag      bool   // Processor flag
+	RunFlag   bool
+	Memory    []byte
+	StackHead uint16 // Starting index of stack in Memory array
+	StackSize uint16
+	Clock     float64     // clock delay in seconds. If = 0, full speed
+	CPUStatus chan string // Channel for passing status to monitor goroutines
 }
 
 // FetchInstruction is a dispatcher function, which takes care of properly
@@ -131,9 +130,8 @@ func (c *CPU) ProcessExtendedOpCode(instruction byte) {
 	switch op {
 	case HALT:
 		logger.Println("HALT instruction")
-		c.RunningFlag = false
-		c.HaltFlag = true
-		c.CPUStatus <- "HALT instruction encountered. Execution halted."
+		c.CPUStatus <- "HALT instruction encountered."
+		c.RunFlag = false
 		c.PC++
 	case NOOP:
 		logger.Println("NOOP instruction")
@@ -155,7 +153,6 @@ func (c *CPU) ProcessExtendedOpCode(instruction byte) {
 	case LOAD:
 		logger.Println("LOAD instruction")
 		// Loads the two bytes starting at location addressed by next two bytes into R0
-		//loc := c.getMemoryAddressPC()
 		// PC currently points to next byte in memory
 		c.PC++ // Point to the operand
 		loc := binary.BigEndian.Uint16(c.Memory[c.PC:])
@@ -207,10 +204,6 @@ func (c *CPU) ProcessExtendedOpCode(instruction byte) {
 		c.PC = c.PC + 2 // Point to next instruction
 	default:
 		logger.Println("Undefined extended instruction, skipped.")
-		c.SetRunning(false)
-		c.SetHalt(true)
-		// log.Printf("Program finished. R0 = %d; PC = %d, SP = %d, S[0] = %d\n", c.Registers[0], c.PC, c.SP, c.Stack[0])
-		// logger.Println("End of memory fault. Execution halted.")
 		c.CPUStatus <- "Undefined extended instruction, execution halted."
 	}
 }
@@ -230,8 +223,6 @@ func (c *CPU) Preprocess(code []byte, codeLength uint16) {
 func (c *CPU) Reset() {
 	c.PC = 0
 	c.SP = c.StackHead + 2
-	c.RunningFlag = false
-	c.HaltFlag = false
 
 	for i := 0; i < len(c.Memory); i++ {
 		c.Memory[i] = 0
@@ -243,28 +234,6 @@ func (c *CPU) Reset() {
 		c.Registers[i] = 0
 	}
 }
-
-// Run resets the CPU, carries out a sequence of instruction and finally returns
-// with a string indicating status
-/* func (c *CPU) RunFromPC(codeLength int) {
-	for c.PC < uint16(len(c.Memory)) {
-		if !c.RunningFlag {
-			// logger.Println("CPU exiting run loop.")
-			c.CPUStatus <- "CPU exiting run loop."
-			return
-		}
-		c.FetchInstruction(c.Memory[0:])
-		// logger.Println("RunFromPC: Sleep ", c.Clock, " seconds")
-		time.Sleep(time.Duration(c.Clock) * time.Second)
-		// log.Printf("RunFromPC: R0 = %d; PC = %d, SP = %d, S[0] = %d\n", c.Registers[0], c.PC, c.SP, c.Stack[0])
-	}
-	c.SetRunning(false)
-	c.SetHalt(true)
-	// log.Printf("Program finished. R0 = %d; PC = %d, SP = %d, S[0] = %d\n", c.Registers[0], c.PC, c.SP, c.Stack[0])
-	// logger.Println("End of memory fault. Execution halted.")
-	c.CPUStatus <- "End of memory fault. Execution halted."
-}
-*/
 
 // DO NOT DELETE! Used by go tests
 // Run resets the CPU, carries out a sequence of instruction and finally returns
@@ -371,12 +340,9 @@ func (c *CPU) GetAllMemory() string {
 	remainder := len(c.Memory) % 16
 	// Send header line with memory locations
 	line = "       00 01 02 03 04 05 06 07 08 09 0a 0b 0c 0d 0e 0f\n"
-	//rowHead := 0
 	k := 0
 	for j := 0; j < blocks; j++ {
-		//rowHead = k & 0xff00
 		line = line + fmt.Sprintf("%04x:  ", k)
-		//		line = line + fmt.Sprintf("%04d:  ", rowHead)
 		for i := k; i < k+16; i++ {
 			line = line + fmt.Sprintf("%02x ", c.Memory[i])
 		}
@@ -438,26 +404,6 @@ func (c *CPU) SetClock(delay float64) {
 	c.Clock = delay
 }
 
-// Set Halt Flag
-func (c *CPU) SetHalt(flag bool) {
-	c.HaltFlag = flag
-}
-
-// Get Halt Flag
-func (c *CPU) GetHalt() bool {
-	return c.HaltFlag
-}
-
-// Set Running Flag
-func (c *CPU) SetRunning(flag bool) {
-	c.RunningFlag = flag
-}
-
-// Get Running Flag
-func (c *CPU) GetRunning() bool {
-	return c.RunningFlag
-}
-
 func NewCPU() *CPU {
 	logger = log.New(os.Stdout, "INFO: ", log.Ldate|log.Ltime|log.Lshortfile)
 	return &CPU{}
@@ -505,36 +451,3 @@ func (c *CPU) popPCFromStack() {
 	c.PC = binary.LittleEndian.Uint16(c.Memory[c.SP:])
 	c.SP = c.SP + 2
 }
-
-/* // Gets the two bytes from memory at current PC and returns uint16 value using the Big Endian format
-func (c *CPU) getMemoryAddressPC() uint16 {
-	// PC currently points to next byte in memory
-	rval := binary.LittleEndian.Uint16(c.Memory[c.PC:])
-	c.PC = c.PC + 1 // Point to last byte of this instruction before returning
-	return rval
-}
-
-// Pushes the two bytes from specified register into memory in Big Endian format at current PC
-func (c *CPU) putRegInMemory(reg byte) {
-	// First get the destination address
-	c.PC++
-	addr := binary.BigEndian.Uint16(c.Memory[c.PC:])
-	c.PC = c.PC + 1 // Point to last byte of instruction
-	b := make([]byte, 2)
-	binary.BigEndian.PutUint16(b[0:], c.Registers[reg])
-	// Push Hi byte
-	c.Memory[addr] = b[0]   // Hi byte
-	c.Memory[addr+1] = b[1] // Lo byte
-	// PC now points to next instruction
-}
-
-// Loads the two bytes from inout memory address into the specified register using the Big Endian format
-func (c *CPU) loadRegFromAddr(addr uint16, reg byte) uint16 {
-	if addr > uint16(len(c.Memory)) {
-		// errorLogger = log.New(os.Stderr, "ERROR: LOAD Memory address out of range.", 1)
-		return 0
-	}
-	rval := binary.BigEndian.Uint16(c.Memory[addr:])
-	c.Registers[reg] = rval
-	return rval
-} */
