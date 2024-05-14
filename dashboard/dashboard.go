@@ -17,10 +17,11 @@ import (
 var (
 	c                     *cpusimple.CPU
 	CPUStatus             string
-	sps, pcs              *widget.Label
+	sps, pcs, flag        *widget.Label
 	w                     fyne.Window
 	status                string = "CPU status is displayed here."
 	stackDisplay          string
+	flagDisplay           string
 	stackLabelWidget      *widget.Label
 	stackHeader           *widget.Label
 	registerHeader        *widget.Label
@@ -32,7 +33,6 @@ var (
 	inputCPUClock         *widget.Entry
 	loadButton            *widget.Button
 	runButton             *widget.Button
-	haltButton            *widget.Button
 	stepButton            *widget.Button
 	resetButton           *widget.Button
 	pauseButton           *widget.Button
@@ -53,7 +53,7 @@ var (
 var Console = container.NewVBox()
 var ConsoleScroller = container.NewVScroll(Console)
 
-func New(cpu *cpusimple.CPU, reset func(), load func(), step func(), run func(), pause func(), halt func(), exit func()) fyne.Window {
+func New(cpu *cpusimple.CPU, reset func(), load func(), step func(), run func(), pause func(), exit func()) fyne.Window {
 
 	c = cpu // All data comes from the CPU structure object
 	a := app.NewWithID("simpleCPU")
@@ -68,7 +68,6 @@ func New(cpu *cpusimple.CPU, reset func(), load func(), step func(), run func(),
 	// Control buttons
 	loadButton = widget.NewButton("Load", load)
 	runButton = widget.NewButton("Run", run)
-	haltButton = widget.NewButton("Halt", halt)
 	stepButton = widget.NewButton("Step", step)
 	resetButton = widget.NewButton("Reset", reset)
 	pauseButton = widget.NewButton("Pause", pause)
@@ -78,17 +77,18 @@ func New(cpu *cpusimple.CPU, reset func(), load func(), step func(), run func(),
 	inputCPUClock = widget.NewEntry()
 	inputCPUClock.SetText("0")
 	speedContainer = container.NewHBox(
-		canvas.NewText("Clock = ", color.Black),
+		canvas.NewText("Clock Speed = ", color.Black),
 		inputCPUClock,
-		canvas.NewText("sec  ", color.Black),
+		canvas.NewText("ms  ", color.Black),
 		widget.NewButton("Save", func() {
-			if s, err := strconv.ParseInt(inputCPUClock.Text, 0, 32); err == nil {
+			if s, err := strconv.ParseFloat(inputCPUClock.Text, 64); err == nil {
 				cpu.Clock = s
 			}
-			stringValue := strconv.FormatInt(cpu.Clock, 10)
-			SetStatus("Clock set to " + stringValue + " seconds")
+			//stringValue := strconv.FormatFloat(cpu.Clock, 4, 64)
+			//SetStatus("Clock set to " + stringValue + " seconds")
+			SetStatus(fmt.Sprintf("Clock set to %f milliseconds", cpu.Clock))
 		}),
-		canvas.NewText("Set clock speed in seconds. Zero sets clock to full speed.  ", color.Black),
+		canvas.NewText("Set clock speed in milliseconds. 1.0 sets clock to full speed.  ", color.Black),
 		layout.NewSpacer(),
 	)
 
@@ -97,13 +97,16 @@ func New(cpu *cpusimple.CPU, reset func(), load func(), step func(), run func(),
 	pcs.TextStyle.Monospace = true
 	sps = widget.NewLabel(fmt.Sprintf("SP: x%04x", cpu.SP))
 	sps.TextStyle.Monospace = true
+	flag = widget.NewLabel("Flag: false")
+	flag.TextStyle.Monospace = true
 	cpuInternalsContainer = container.NewHBox(
 		pcs,
 		sps,
+		flag,
 	)
 
 	// Stack
-	stackHeader = widget.NewLabel("Top of Stack\n")
+	stackHeader = widget.NewLabel("Top of Stack\n16-bit words\n(grows hi to lo)\n")
 	stackHeader.TextStyle.Monospace = true
 	stackHeader.TextStyle.Bold = true
 	stackDisplay = cpu.GetStack()
@@ -118,7 +121,7 @@ func New(cpu *cpusimple.CPU, reset func(), load func(), step func(), run func(),
 		))
 
 	// Registers
-	registerHeader = widget.NewLabel("Registers\n")
+	registerHeader = widget.NewLabel("Registers\n16-bit words\n")
 	registerHeader.TextStyle.Monospace = true
 	registerHeader.TextStyle.Bold = true
 	registerDisplay = cpu.GetRegisters()
@@ -134,7 +137,7 @@ func New(cpu *cpusimple.CPU, reset func(), load func(), step func(), run func(),
 
 	// Memory
 	memoryDisplay = cpu.GetAllMemory()
-	memoryLabel = widget.NewLabel("Memory\n")
+	memoryLabel = widget.NewLabel("Memory\nbytes\n")
 	memoryLabel.TextStyle.Monospace = true
 	memoryLabel.TextStyle.Bold = true
 	memoryGridLabel = widget.NewLabel(memoryDisplay)
@@ -152,7 +155,6 @@ func New(cpu *cpusimple.CPU, reset func(), load func(), step func(), run func(),
 		runButton,
 		stepButton,
 		pauseButton,
-		haltButton,
 		exitButton,
 	)
 
@@ -188,6 +190,13 @@ func UpdateAll() {
 	// Reload
 	pcs.SetText(fmt.Sprintf("PC: x%04x", c.PC))
 	sps.SetText(fmt.Sprintf("SP: x%04x", c.SP))
+	if c.Flag {
+		flagDisplay = "Flag: true"
+	} else {
+		flagDisplay = "Flag: false"
+	}
+	flag.SetText(flagDisplay)
+	inputCPUClock.SetText(fmt.Sprintf("%3f", c.Clock))
 	stackDisplay = c.GetStack()
 	stackLabelWidget.Text = stackDisplay
 	memoryDisplay = c.GetAllMemory()
