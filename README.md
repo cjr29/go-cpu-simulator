@@ -1,10 +1,10 @@
 # Introduction
 
-This CPU simulator project is my way of learning the Go programming language. My interest in microprocessors led to my choice of a microprocessor simulator as the base of the project. I've found the best way to learn new programming languages is to read and work with other's code. I found a basic CPU simulator in Go by Wojciech S. Gac. The cod ewas a single package and file with only seven instructions. Just reading Wojtek's code to understand the CPU and how the instructions worked gave me some solid understanding og Go syntax and semantics.
+This CPU simulator project is my way of learning the Go programming language. My interest in microprocessors led to my choice of a microprocessor simulator as the base of the project. I've found the best way to learn new programming languages is to read and work with other's code. I found a basic CPU simulator in Go by Wojciech S. Gac. The code was a single package and file with only seven instructions. Just reading Wojtek's code to understand the CPU and how the instructions worked gave me some solid understanding of Go syntax and semantics.
 
 I decided I wanted to integrate a graphical user interface (GUI) dashboard with the simulator in order to watch the internal working of the CPU and experiment with the instructions. I selected the Fyne.io cross-platform library for its completeness and coverage of Linux, macOS, and Windows.
 
-I added an extended instruction set as well as re-architecting the memory and stack to make this more like an early microprocessor. The extended instruction set uses bit 4 as a flag to activate an extended instruction. Extended instructions may use additional bytes following the actual instruction byte to represent a memory address or value.
+I added an extended instruction set as well as re-architected the memory and stack to make this more like an early microprocessor. The extended instruction set uses bit 4 as a flag to activate an extended instruction. Extended instructions may use additional bytes following the actual instruction byte to represent a memory address or value. I make use of goroutines and channels to enable live buttons to interact with the running CPU. Goroutines and channels help avoid blocking of the UI on long programs.
 
 ## Architecture description
 
