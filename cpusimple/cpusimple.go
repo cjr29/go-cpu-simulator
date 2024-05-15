@@ -124,17 +124,17 @@ func (c *CPU) FetchInstruction(code []byte) {
 }
 
 func (c *CPU) ProcessExtendedOpCode(instruction byte) {
-	logger.Println("ProcessExtendedOpCode")
+	//logger.Println("ProcessExtendedOpCode")
 	op := instruction & 0x1f
 	//logger.Printf("OP: %02x", op)
 	switch op {
 	case HALT:
-		logger.Println("HALT instruction")
+		//logger.Println("HALT instruction")
 		c.CPUStatus <- "HALT instruction encountered."
 		c.RunFlag = false
 		c.PC++
 	case NOOP:
-		logger.Println("NOOP instruction")
+		//logger.Println("NOOP instruction")
 		c.PC++
 	case STORE:
 		// Stores the two bytes of R0 at the location specified by the next two bytes from the PC
@@ -148,19 +148,19 @@ func (c *CPU) ProcessExtendedOpCode(instruction byte) {
 		c.Memory[addr+1] = b[1] // Lo byte
 		c.PC = c.PC + 2         // Point to next instruction
 		// PC now points to next instruction
-		logger.Println("STORE instruction")
+		//logger.Println("STORE instruction")
 	case LOAD:
-		logger.Println("LOAD instruction")
+		//logger.Println("LOAD instruction")
 		// Loads the two bytes starting at location addressed by next two bytes into R0
 		// PC currently points to next byte in memory
 		c.PC++ // Point to the operand
 		loc := binary.BigEndian.Uint16(c.Memory[c.PC:])
 		c.Registers[0] = binary.BigEndian.Uint16(c.Memory[loc:])
-		logger.Printf("R0 = x%04x", c.Registers[0])
+		//logger.Printf("R0 = x%04x", c.Registers[0])
 		c.PC = c.PC + 2 // Point to next instruction
-		logger.Printf("LOAD Memory address retrieved: x%04x, PC = x%04x", loc, c.PC)
+		//logger.Printf("LOAD Memory address retrieved: x%04x, PC = x%04x", loc, c.PC)
 	case SWAP:
-		logger.Println("SWAP instruction")
+		//logger.Println("SWAP instruction")
 		// Exchange the contents of Rx with Ry and vice versa
 		// Rx specified by hi nibble, Ry by lo nibble of next byte
 		//logger.Printf("SWAP: PC = x%04x", c.PC)
@@ -169,13 +169,13 @@ func (c *CPU) ProcessExtendedOpCode(instruction byte) {
 		//logger.Printf("SWAP: regs = x%02x", regs)
 		rx := regs >> 4
 		ry := regs & 0x0f
-		logger.Printf("SWAP: rx=x%02x, ry=x%02x", rx, ry)
+		//logger.Printf("SWAP: rx=x%02x, ry=x%02x", rx, ry)
 		temp := c.Registers[rx]
 		c.Registers[rx] = c.Registers[ry]
 		c.Registers[ry] = temp
 		c.PC++ // Next instruction
 	case CALL:
-		logger.Println("CALL instruction")
+		//logger.Println("CALL instruction")
 		// Jump to subroutine at address pointed to by PC,PC++, pushing PC+2 onto stack
 		c.PC++                                                 // Point to the CALL operand
 		subroutine := binary.BigEndian.Uint16(c.Memory[c.PC:]) // Address of subroutine
@@ -183,11 +183,11 @@ func (c *CPU) ProcessExtendedOpCode(instruction byte) {
 		c.pushPCOnStack()                                      // Push the return address on the stack
 		c.PC = subroutine                                      // Jump to subroutine
 	case RET:
-		logger.Println("RET instruction")
+		//logger.Println("RET instruction")
 		// Return from subroutine by popping the return address off the stack and setting PC to that value
 		c.popPCFromStack() // PC now points to the next instruction after returning
 	case CMP:
-		logger.Println("CMP instruction")
+		//logger.Println("CMP instruction")
 		// Compare contents of R0 with contents of R1 and set CPU Flag to true if matched or false if not
 		if c.Registers[0] == c.Registers[1] {
 			c.Flag = true
@@ -196,7 +196,7 @@ func (c *CPU) ProcessExtendedOpCode(instruction byte) {
 		}
 		c.PC++ // Next instruction
 	case XSET:
-		logger.Println("XSET instruction")
+		//logger.Println("XSET instruction")
 		// Get next two bytes following this instruction in big endian and store in R0
 		c.PC++
 		rval := binary.BigEndian.Uint16(c.Memory[c.PC:])
@@ -204,7 +204,7 @@ func (c *CPU) ProcessExtendedOpCode(instruction byte) {
 		// logger.Printf("Value retrieved at PC = x%04x", rval)
 		c.PC = c.PC + 2 // Point to next instruction
 	default:
-		logger.Println("Undefined extended instruction, skipped.")
+		//logger.Println("Undefined extended instruction, skipped.")
 		c.CPUStatus <- "Undefined extended instruction, execution halted."
 	}
 }
@@ -430,7 +430,7 @@ func (c *CPU) pushPCOnStack() {
 func (c *CPU) popRegFromStack(reg byte) {
 	// SP currently points to last value at top of stack
 	rval := binary.LittleEndian.Uint16(c.Memory[c.SP:])
-	logger.Printf("Popped from stack, R%x = x%04x", reg, rval)
+	//logger.Printf("Popped from stack, R%x = x%04x", reg, rval)
 	c.Registers[reg] = rval
 	c.SP = c.SP + 2
 }
@@ -439,6 +439,6 @@ func (c *CPU) popRegFromStack(reg byte) {
 func (c *CPU) popPCFromStack() {
 	// SP currently points to last value at top of stack
 	c.PC = binary.LittleEndian.Uint16(c.Memory[c.SP:])
-	logger.Printf("Popped from stack, PC = x%04x", c.PC)
+	//logger.Printf("Popped from stack, PC = x%04x", c.PC)
 	c.SP = c.SP + 2
 }
