@@ -74,17 +74,19 @@ func New(cpu *cpusimple.CPU, reset func(), load func(), step func(), run func(),
 
 	// Clock settings line
 	inputCPUClock = widget.NewEntry()
-	inputCPUClock.SetText("0")
+	inputCPUClock.SetText("1")
 	speedContainer = container.NewHBox(
 		canvas.NewText("Clock Speed = ", color.Black),
 		inputCPUClock,
 		canvas.NewText("ms  ", color.Black),
 		widget.NewButton("Save", func() {
 			if s, err := strconv.ParseFloat(inputCPUClock.Text, 64); err == nil {
-				cpu.Clock = s
+				if s <= 1.0 {
+					cpu.Clock = 1 // ticker requires positive value >= 1
+				} else {
+					cpu.Clock = s
+				}
 			}
-			//stringValue := strconv.FormatFloat(cpu.Clock, 4, 64)
-			//SetStatus("Clock set to " + stringValue + " seconds")
 			SetStatus(fmt.Sprintf("Clock set to %f milliseconds", cpu.Clock))
 		}),
 		canvas.NewText("Set clock speed in milliseconds. 1.0 sets clock to full speed.  ", color.Black),
