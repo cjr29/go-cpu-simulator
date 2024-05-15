@@ -44,7 +44,7 @@ type CPU struct {
 	PC        uint16 // Program counter
 	SP        uint16 // Stack pointer
 	Flag      bool   // Processor flag
-	RunFlag   bool
+	RunFlag   bool   // Tells cpuclock that it is active
 	Memory    []byte
 	StackHead uint16 // Starting index of stack in Memory array
 	StackSize uint16
@@ -139,7 +139,6 @@ func (c *CPU) ProcessExtendedOpCode(instruction byte) {
 	case STORE:
 		// Stores the two bytes of R0 at the location specified by the next two bytes from the PC
 		// Use Big-Endian for storing.
-		//c.putRegInMemory(0)
 		c.PC++ // First get the destination address
 		addr := binary.BigEndian.Uint16(c.Memory[c.PC:])
 		b := make([]byte, 2)
@@ -157,8 +156,9 @@ func (c *CPU) ProcessExtendedOpCode(instruction byte) {
 		c.PC++ // Point to the operand
 		loc := binary.BigEndian.Uint16(c.Memory[c.PC:])
 		c.Registers[0] = binary.BigEndian.Uint16(c.Memory[loc:])
+		logger.Printf("R0 = x%04x", c.Registers[0])
 		c.PC = c.PC + 2 // Point to next instruction
-		//logger.Printf("LOAD Memory address retrieved: x%04x", loc)
+		logger.Printf("LOAD Memory address retrieved: x%04x, PC = x%04x", loc, c.PC)
 	case SWAP:
 		logger.Println("SWAP instruction")
 		// Exchange the contents of Rx with Ry and vice versa
@@ -169,16 +169,17 @@ func (c *CPU) ProcessExtendedOpCode(instruction byte) {
 		//logger.Printf("SWAP: regs = x%02x", regs)
 		rx := regs >> 4
 		ry := regs & 0x0f
-		//logger.Printf("SAWP: rx=x%02x, ry=x%02x", rx, ry)
+		logger.Printf("SWAP: rx=x%02x, ry=x%02x", rx, ry)
 		temp := c.Registers[rx]
 		c.Registers[rx] = c.Registers[ry]
 		c.Registers[ry] = temp
 		c.PC++ // Next instruction
 	case CALL:
-		logger.Println("SUB instruction")
+		logger.Println("CALL instruction")
 		// Jump to subroutine at address pointed to by PC,PC++, pushing PC+2 onto stack
 		c.PC++                                                 // Point to the CALL operand
 		subroutine := binary.BigEndian.Uint16(c.Memory[c.PC:]) // Address of subroutine
+		c.PC = c.PC + 2                                        // Skip past operand
 		c.pushPCOnStack()                                      // Push the return address on the stack
 		c.PC = subroutine                                      // Jump to subroutine
 	case RET:
@@ -223,7 +224,7 @@ func (c *CPU) Preprocess(code []byte, codeLength uint16) {
 func (c *CPU) Reset() {
 	c.PC = 0
 	c.SP = c.StackHead + 2
-
+	c.Flag = false
 	for i := 0; i < len(c.Memory); i++ {
 		c.Memory[i] = 0
 	}
@@ -233,18 +234,6 @@ func (c *CPU) Reset() {
 	for i := 0; i < 17; i++ {
 		c.Registers[i] = 0
 	}
-}
-
-// DO NOT DELETE! Used by go tests
-// Run resets the CPU, carries out a sequence of instruction and finally returns
-// the contents of R0
-func (c *CPU) Run(code []byte, codeLength uint16) uint16 {
-	c.Reset()
-	c.Preprocess(code, codeLength)
-	for c.PC < codeLength {
-		c.FetchInstruction(code)
-	}
-	return c.Registers[0]
 }
 
 // Be sure there is a program in memory
@@ -441,6 +430,7 @@ func (c *CPU) pushPCOnStack() {
 func (c *CPU) popRegFromStack(reg byte) {
 	// SP currently points to last value at top of stack
 	rval := binary.LittleEndian.Uint16(c.Memory[c.SP:])
+	logger.Printf("Popped from stack, R%x = x%04x", reg, rval)
 	c.Registers[reg] = rval
 	c.SP = c.SP + 2
 }
@@ -449,5 +439,6 @@ func (c *CPU) popRegFromStack(reg byte) {
 func (c *CPU) popPCFromStack() {
 	// SP currently points to last value at top of stack
 	c.PC = binary.LittleEndian.Uint16(c.Memory[c.SP:])
+	logger.Printf("Popped from stack, PC = x%04x", c.PC)
 	c.SP = c.SP + 2
 }
