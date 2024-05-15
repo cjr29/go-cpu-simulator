@@ -24,6 +24,7 @@ var (
 	runChan   = make(chan bool)
 	pauseChan = make(chan bool)
 	ticker    *time.Ticker
+	status    string
 
 	/* program = []byte{
 		0x05, 0x81, 0x06, 0xa0, 0x20, // SET R0=5, PUSH, SET R0=6, POP R1, R0=R0+R1
@@ -101,6 +102,8 @@ func main() {
 	cpu.InitMemory(MEMSIZE)
 	cpu.InitStack(STACKHEAD)
 	cpu.SetClock(1)
+	status = "PAUSE"
+	cpu.RunFlag = true
 
 	ticker = time.NewTicker(time.Duration(cpu.Clock) * time.Millisecond)
 
@@ -114,57 +117,58 @@ func main() {
 
 func load() {
 	// Loads code in []program into CPU memory at index 0
-	cpu.SetRunning(false)
 	cpu.Reset()
 	cpu.Load(program, len(program))
 	cpu.Preprocess(program, uint16(len(program)))
 	dashboard.SetStatus("Program loaded.")
 	dashboard.UpdateAll()
+	cpu.RunFlag = true
 }
 
 func run() {
 	result := cpu.VerifyProgramInMemory()
 	if !result {
 		dashboard.SetStatus("ERROR: No program loaded.")
-		cpu.SetRunning(false)
 		return
 	}
-	// If CPU already running, do nothing
-	if cpu.GetRunning() {
-		dashboard.SetStatus("Program already running.")
-		dashboard.UpdateAll()
-		return
-	}
-	cpu.SetRunning(true)
+	cpu.CPUStatus <- "RUN"
+	status = "RUN"
+	cpu.RunFlag = true
 	go g_monitorCPUStatus()
 	go g_Run(runChan)
 	go startClock()
 }
 
 func step() {
+	if !cpu.RunFlag {
+		ticker.Stop()
+		return
+	}
 	result := cpu.VerifyProgramInMemory()
 	if !result {
 		dashboard.SetStatus("ERROR: No program loaded.")
-		cpu.SetRunning(false)
 		return
 	}
-	cpu.SetRunning(true)
 	go g_monitorCPUStatus()
 	go g_Step(stepChan)
 	go startClock()
+	ticker.Stop()
 }
 
 func reset() {
-	cpu.SetRunning(false)
 	cpu.Reset()
 	dashboard.SetStatus("CPU and memory reset.")
 	dashboard.UpdateAll()
+	ticker.Stop()
+	cpu.RunFlag = false
 }
 
 func pause() {
-	cpu.SetRunning(false)
 	dashboard.SetStatus("CPU paused. Press Run or Step to continue current program.")
 	dashboard.UpdateAll()
+	status = "PAUSE"
+	cpu.RunFlag = true
+	ticker.Stop()
 	go g_Pause(pauseChan)
 }
 
@@ -179,28 +183,20 @@ func startClock() {
 		go g_monitorCPUStatus()
 		select {
 		case <-pauseChan:
-			logger.Println("Clock paused.")
-			cpu.CPUStatus <- "Clock paused."
 			dashboard.SetStatus("Clock paused.")
 			dashboard.UpdateAll()
 			ticker.Stop()
 		case <-runChan:
-			logger.Println("Clock started.")
-			cpu.CPUStatus <- "Clock started."
 			dashboard.SetStatus("Clock started.")
 			dashboard.UpdateAll()
 			ticker = time.NewTicker(time.Duration(cpu.Clock) * time.Millisecond)
 		case <-stepChan:
-			logger.Println("Single step.")
-			cpu.CPUStatus <- "Single step."
 			// Fetch and execute next instruction
 			cpu.FetchInstruction(cpu.Memory)
-			cpu.SetRunning(false)
 			dashboard.SetStatus(fmt.Sprintf("Single step. PC = x%04x, SP = x%04x, Flag = %t", cpu.PC, cpu.SP, cpu.Flag))
 			dashboard.UpdateAll()
-		case <-ticker.C:
-			// logger.Println("Fetch and Run instruction at", t)
-			if cpu.GetRunning() {
+		case <-ticker.C: // Loops to here as long as ticker is running
+			if cpu.RunFlag {
 				// Fetch and execute next instruction
 				cpu.FetchInstruction(cpu.Memory)
 				dashboard.UpdateAll()
@@ -211,35 +207,18 @@ func startClock() {
 	}
 }
 
-// This function is a goroutine that watches the Running Flag in the CPU
-// and updates status display periodically
-// Generates excessive status scrolling. Use only for debugging
-func monitorCPUStatus() {
-	for {
-		t := time.Now()
-		disptime := t.Format(time.TimeOnly)
-		if cpu.GetRunning() {
-			dashboard.SetStatus("CPU is running, " + disptime)
-			dashboard.UpdateAll()
-		} else {
-			dashboard.SetStatus("CPU is not running, " + disptime)
-			dashboard.UpdateAll()
-		}
-		time.Sleep(time.Duration(5) * time.Second)
-	}
-}
-
 func g_monitorCPUStatus() {
 	// Respond when channel message is received from CPU
 	s := <-cpu.CPUStatus
-	//logger.Println("From channel monitor: " + s)
 	dashboard.SetStatus("From channel monitor: " + s)
+	if s == "Halt" {
+		ticker.Stop()
+	}
 }
 
 // Monitor dashboard Step button status
 func g_Step(c chan bool) {
 	// Return dashboard status message
-	//logger.Println("From channel monitor: Single step.")
 	dashboard.SetStatus("From channel monitor: Single step.")
 	c <- true
 }
@@ -247,7 +226,6 @@ func g_Step(c chan bool) {
 // Monitor dashboard Run button status
 func g_Run(c chan bool) {
 	// Return dashboard status message
-	//logger.Println("From channel monitor: Running loaded program ...")
 	dashboard.SetStatus("From channel monitor: Running loaded program ...")
 	c <- true
 }
@@ -255,7 +233,6 @@ func g_Run(c chan bool) {
 // Monitor dashboard Pause button status
 func g_Pause(c chan bool) {
 	// Return dashboard status message
-	//logger.Println("From channel monitor: Program paused.")
 	dashboard.SetStatus("From channel monitor: Program paused.")
 	c <- true
 }
