@@ -110,6 +110,7 @@ Clone the github repo for go-cpu-simulator
 ```
 $ cd go-cpu-simulator
 $ go mod tidy
-$ go run go-cpu-simulator
+$ go build simplesimulator
+$ run ./simplesimulator
 ```
 
